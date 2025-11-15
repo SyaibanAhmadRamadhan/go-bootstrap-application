@@ -1,5 +1,69 @@
-.vscode
-.env
-.env.json
-env.json
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+
+# VSCode & JetBrains
+.vscode/
+.idea/
+
+# Environment Files
+*env
+*env.*
+!*env.example*
+
+# local override
+*.local
+
+# Logs
 *.log
+logs/
+log/
+
+# Go Build Artifacts
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# compiled binaries
+*.out
+
+# go test files
+*.test
+
+# Go coverage
+coverage.out
+coverage/
+
+# cache
+/.cache/
+go.sum
+
+# Generated Files And Folder
+*gen.go
+*mock.go
+mock_*.go
+gen/
+generated/
+
+# protobuf / generated assets
+*.pb.go
+
+# swag / openapi
+docs/
+
+# build outputs
+public/
+dist/
+
+# lock file (optional)
+*.pid
+
+# temporary
+tmp/
+temp/
+*.tmp

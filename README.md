@@ -1,3 +1,6 @@
-# ERP DIRECTORY SERVICE
+# GO SERVICE BOOTSTRAP
 
-A canonical source of truth for people identities in an ERP: users, employees, and their organizational context. Built for a distributed monolith setup: many services, one database, with strict ownership API contracts between services.
+A starter template for building internal backend services.  
+This repository provides a ready-to-use project layout, wiring, and tooling so you don’t have to set up everything from scratch for every new service.
+
+It’s designed for a “distributed monolith” style architecture: many services, one database, with clear ownership and strict API contracts between services.

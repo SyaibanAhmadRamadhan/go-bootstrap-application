@@ -1,0 +1,103 @@
+{
+    "root": [
+        "openapi",
+        "info",
+        "servers",
+        "tags",
+        "paths",
+        "components",
+        "x-tagGroups",
+        "externalDocs"
+    ],
+    "get": [
+        "operationId",
+        "summary",
+        "description",
+        "parameters",
+        "requestBody",
+        "responses"
+    ],
+    "post": [
+        "operationId",
+        "summary",
+        "description",
+        "parameters",
+        "requestBody",
+        "responses"
+    ],
+    "put": [
+        "operationId",
+        "summary",
+        "description",
+        "parameters",
+        "requestBody",
+        "responses"
+    ],
+    "patch": [
+        "operationId",
+        "summary",
+        "description",
+        "parameters",
+        "requestBody",
+        "responses"
+    ],
+    "delete": [
+        "operationId",
+        "summary",
+        "description",
+        "parameters",
+        "requestBody",
+        "responses"
+    ],
+    "responses": [
+        "description",
+        "headers",
+        "content",
+        "links"
+    ],
+    "parameters": [
+        "name",
+        "in",
+        "description",
+        "required",
+        "schema"
+    ],
+    "requestBody": [
+        "description",
+        "required",
+        "content"
+    ],
+    "content": [],
+    "components": [
+        "schemas",
+        "parameters",
+        "responses"
+    ],
+    "schema": [
+        "description",
+        "type",
+        "items",
+        "properties",
+        "format",
+        "example",
+        "default"
+    ],
+    "schemas": [
+        "description",
+        "type",
+        "items",
+        "properties",
+        "format",
+        "example",
+        "default"
+    ],
+    "properties": [
+        "description",
+        "type",
+        "items",
+        "format",
+        "example",
+        "default",
+        "enum"
+    ]
+}

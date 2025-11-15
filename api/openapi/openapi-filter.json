@@ -1,0 +1,18 @@
+{
+    "methods": [],
+    "inverseMethods": [],
+    "tags": [],
+    "inverseTags": [],
+    "operationIds": [],
+    "inverseOperationIds": [],
+    "operations": [],
+    "flags": [],
+    "flagValues": [],
+    "unusedComponents": [
+        "parameters",
+        "schemas"
+    ],
+    "stripFlags": [],
+    "responseContent": [],
+    "inverseResponseContent": []
+}

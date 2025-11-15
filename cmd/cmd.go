@@ -10,7 +10,7 @@ func main() {
 		Short: "A CLI Directory Service",
 	}
 
-	root.AddCommand(restApiCmd)
+	root.AddCommand(newRestApiCmd())
 	err := root.Execute()
 	if err != nil {
 		panic(err)

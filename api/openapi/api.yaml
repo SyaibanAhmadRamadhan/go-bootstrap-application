@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Yummy ERP API
+  version: 0.1.0
+  description: |
+    Consolidated API spec generated from module fragments.
+servers:
+  - url: 'http://localhost:8080'
+    description: Local dev
+tags:
+  - name: iam
+    description: Identity & Access Management
+  - name: users
+    description: User profile & preferences
+  - name: health
+    description: Health check endpoints
+paths:
+  /api/v1/health:
+    get:
+      operationId: ApiV1GetHealthCheck
+      summary: Health check endpoint
+      description: Returns the health status of the service
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1GetHealthCheckResponse'
+      security: []
+      tags:
+        - health
+components:
+  schemas:
+    ApiV1GetHealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        timestamp:
+          type: string
+          format: date-time
+        dependencies:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ApiV1GetHealthCheckResponseDependencyStatus'
+      required:
+        - status
+        - timestamp
+        - dependencies
+    ApiV1GetHealthCheckResponseDependencyStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+          enum:
+            - ok
+            - error
+        message:
+          type: string
+          example: Connection successful
+        responseTime:
+          description: Response time in milliseconds
+          type: number
+          example: 15
+      required:
+        - status
+    ErrorValidation:
+      type: object
+      properties:
+        field:
+          type: string
+          example: email
+        message:
+          type: array
+          items:
+            type: string
+          example:
+            - Email is invalid
+            - Email is required
+      required:
+        - field
+        - message
+  responses:
+    Timeout:
+      description: Timeout error
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Validation failed
+            required:
+              - message
+    UnauthorizedError:
+      description: Unauthorized access
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Validation failed
+            required:
+              - message
+    NotFound:
+      description: Data Not Found
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Data Not Found
+            required:
+              - message
+    ForbiddenError:
+      description: Forbidden access
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Validation failed
+            required:
+              - message
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Validation failed
+              error_validations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErrorValidation'
+                example:
+                  - field: email
+                    message:
+                      - Email is invalid
+                nullable: false
+            required:
+              - message
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            properties:
+              message:
+                description: Error message
+                type: string
+                example: Validation failed
+            required:
+              - message
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

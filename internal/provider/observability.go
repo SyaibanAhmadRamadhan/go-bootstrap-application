@@ -4,21 +4,57 @@ import (
 	"context"
 	"erp-directory-service/internal/config"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/observability"
-	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/observability/zerologhook"
+	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/observability/loghook"
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/utils/generic"
 	"github.com/rs/zerolog"
 )
 
-func NewLogging() {
+func NewLogging(slogHookOption, zerologHookOption string) func() error {
 	appConfig := config.GetApp()
+	closeFn := make([]func(), 0, 2)
+
+	var slogHook io.Writer
+	switch slogHookOption {
+	case "file-writer":
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-secondary.log", appConfig.Name), 10, 2, 30, true)
+		slogHook = rotatingWriter
+		closeFn = append(closeFn, rotatingWriter.Close)
+	case "std-out":
+		slogHook = os.Stdout
+	default:
+		panic("unknown slog handler option")
+	}
+
+	var zerologHook io.Writer
+	switch zerologHookOption {
+	case "file-writer":
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-primary.log", appConfig.Name), 10, 2, 30, true)
+		zerologHook = rotatingWriter
+		closeFn = append(closeFn, rotatingWriter.Close)
+	case "std-out":
+		zerologHook = os.Stdout
+	default:
+		panic("unknown slog handler option")
+	}
+
 	observability.NewLog(observability.LogConfig{
-		Hook:        zerologhook.NewRotatingWriter(fmt.Sprintf("%s.log", appConfig.Name), 10, 2, 30, true),
+		ZerologHook: zerologHook,
+		SlogHook:    slogHook,
 		Mode:        "json",
 		Level:       generic.Ternary(appConfig.Env == "development", "debug", "info"),
 		Env:         appConfig.Env,
 		ServiceName: appConfig.Name,
 	})
 	observability.Start(context.Background(), zerolog.InfoLevel).Msg("init logging successfully")
+
+	return func() error {
+		for _, v := range closeFn {
+			v()
+		}
+		return nil
+	}
 }
