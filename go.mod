@@ -2,10 +2,8 @@ module erp-directory-service
 
 go 1.25.3
 
-replace github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.16 => /Users/ibanrama-master/Documents/Developments/OpenSourceProject/go-foundation-kit
-
 require (
-	github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.16
+	github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.17
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-sql-driver/mysql v1.9.3
