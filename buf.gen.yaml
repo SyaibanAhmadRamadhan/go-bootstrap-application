@@ -3,11 +3,11 @@ inputs:
   - directory: api/proto
 plugins:
   - remote: buf.build/protocolbuffers/go:v1.36.5
-    out: gen/grpcgen
+    out: internal/gen/grpcgen
     opt:
       - paths=source_relative
   - remote: buf.build/grpc/go
-    out: gen/grpcgen
+    out: internal/gen/grpcgen
     opt:
       - paths=source_relative
 
@@ -15,4 +15,4 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: erp-directory-service/gen/grpcgen
+      value: erp-directory-service/internal/gen/grpcgen

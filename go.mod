@@ -1,14 +1,15 @@
 module erp-directory-service
 
-go 1.25.3
+go 1.25.4
 
 require (
-	github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.17
+	github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.18
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
+	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.9
 )
@@ -36,9 +37,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/google/subcommands v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/gookit/color v1.6.0 // indirect
@@ -63,7 +62,6 @@ require (
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/securego/gosec/v2 v2.22.10 // indirect
 	github.com/segmentio/kafka-go v0.4.48 // indirect
 	github.com/speakeasy-api/jsonpath v0.6.0 // indirect
@@ -87,7 +85,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.0 // indirect
-	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
@@ -106,7 +103,6 @@ require (
 )
 
 tool (
-	github.com/google/wire/cmd/wire
 	github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 	github.com/securego/gosec/v2/cmd/gosec
 	go.uber.org/mock/mockgen

@@ -1,8 +1,8 @@
 package transporthealthcheck
 
 import (
-	"erp-directory-service/gen/restapigen"
 	domainhealthcheck "erp-directory-service/internal/domain/healthcheck"
+	"erp-directory-service/internal/gen/restapigen"
 	"net/http"
 
 	httpx "github.com/SyaibanAhmadRamadhan/go-foundation-kit/http"

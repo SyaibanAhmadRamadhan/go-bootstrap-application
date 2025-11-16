@@ -1,7 +1,7 @@
 package app
 
 import (
-	"erp-directory-service/gen/grpcgen/healthcheck"
+	"erp-directory-service/internal/gen/grpcgen/healthcheck"
 	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
 
 	"google.golang.org/grpc"

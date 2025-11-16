@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"erp-directory-service/gen/restapigen"
 	"erp-directory-service/internal/config"
+	"erp-directory-service/internal/gen/restapigen"
 	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
 	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
 	"erp-directory-service/internal/provider"

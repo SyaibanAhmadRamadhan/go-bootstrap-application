@@ -1,3 +1,5 @@
+//go:generate go tool mockgen -source=repository.go -destination=../../gen/mockgen/healthcheck_repository_mock.gen.go -package=mockgen
+
 package domainhealthcheck
 
 import (

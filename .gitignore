@@ -48,6 +48,7 @@ go.sum
 *mock.go
 mock_*.go
 gen/
+mockgen/
 generated/
 
 # protobuf / generated assets
