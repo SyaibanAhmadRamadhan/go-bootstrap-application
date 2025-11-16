@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/chix"
+	"github.com/go-chi/chi/v5"
 )
 
 type restapi struct {
@@ -43,7 +44,7 @@ func NewRestApi(port int) *restapi {
 
 	restApi.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: restapigen.HandlerFromMux(restApi.init(), handler),
+		Handler: restapigen.HandlerFromMux(restApi.init(handler), handler),
 	}
 
 	return restApi
@@ -78,7 +79,7 @@ func (r *restapi) Start() {
 	}
 }
 
-func (r *restapi) init() routerRestApi {
+func (r *restapi) init(c *chi.Mux) routerRestApi {
 	db, err := provider.NewDB()
 	if err != nil {
 		panic(err)
@@ -89,8 +90,10 @@ func (r *restapi) init() routerRestApi {
 	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
 
 	router := routerRestApi{
+		handler:                     c,
 		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
 	}
+	router.init()
 
 	return router
 }

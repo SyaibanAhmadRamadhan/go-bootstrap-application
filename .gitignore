@@ -11,9 +11,6 @@ Thumbs.db
 *env.*
 !*env.example*
 
-# local override
-*.local
-
 # Logs
 *.log
 logs/
@@ -39,6 +36,10 @@ build/
 coverage.out
 coverage/
 
+# Go Pprof
+*.prof
+prof/
+
 # cache
 /.cache/
 go.sum
@@ -54,11 +55,7 @@ generated/
 # protobuf / generated assets
 *.pb.go
 
-# swag / openapi
-docs/
-
 # build outputs
-public/
 dist/
 
 # lock file (optional)
