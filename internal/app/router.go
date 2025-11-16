@@ -1,7 +1,10 @@
 package app
 
-import "erp-directory-service/gen/restapigen"
+import (
+	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
+)
 
 type router struct {
-	restapigen.Unimplemented
+	// restapigen.Unimplemented
+	*transporthealthcheck.TransportHealthCheckRestApi
 }

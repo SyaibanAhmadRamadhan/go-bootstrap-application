@@ -31,3 +31,7 @@ func LoadConfig() {
 func GetApp() App {
 	return loader.Get().App
 }
+
+func GetDatabase() Database {
+	return loader.Get().Database
+}

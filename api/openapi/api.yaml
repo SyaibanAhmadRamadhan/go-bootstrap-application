@@ -46,15 +46,17 @@ components:
           type: string
           format: date-time
         dependencies:
-          type: object
-          properties:
-            database:
-              $ref: '#/components/schemas/ApiV1GetHealthCheckResponseDependencyStatus'
+          $ref: '#/components/schemas/ApiV1GetHealthCheckResponseDependencies'
       required:
         - status
         - timestamp
         - dependencies
-    ApiV1GetHealthCheckResponseDependencyStatus:
+    ApiV1GetHealthCheckResponseDependencies:
+      type: object
+      properties:
+        database:
+          $ref: '#/components/schemas/ApiV1GetHealthCheckResponseDependency'
+    ApiV1GetHealthCheckResponseDependency:
       type: object
       properties:
         status:
@@ -66,12 +68,14 @@ components:
         message:
           type: string
           example: Connection successful
-        responseTime:
+        response_time:
           description: Response time in milliseconds
-          type: number
+          type: string
           example: 15
       required:
         - status
+        - response_time
+        - message
     ErrorValidation:
       type: object
       properties:

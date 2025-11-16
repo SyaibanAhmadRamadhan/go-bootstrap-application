@@ -8,6 +8,7 @@ require (
 	github.com/SyaibanAhmadRamadhan/go-foundation-kit v1.3.16
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 )
@@ -16,6 +17,7 @@ require (
 	cloud.google.com/go v0.121.2 // indirect
 	cloud.google.com/go/auth v0.16.5 // indirect
 	cloud.google.com/go/compute/metadata v0.8.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.13.0 // indirect
 	github.com/ccojocar/zxcvbn-go v1.0.4 // indirect

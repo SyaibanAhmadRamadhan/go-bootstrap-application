@@ -4,6 +4,10 @@ import (
 	"context"
 	"erp-directory-service/gen/restapigen"
 	"erp-directory-service/internal/config"
+	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
+	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
+	"erp-directory-service/internal/provider"
+	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,25 +17,9 @@ import (
 )
 
 type restapi struct {
-	server *http.Server
-	port   int
-}
-
-func (r *restapi) Shutdown(ctx context.Context) error {
-	err := r.server.Shutdown(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *restapi) Start() {
-	fmt.Println("REST API listening on", r.server.Addr)
-	err := r.server.ListenAndServe()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		slog.Error(err.Error())
-	}
+	server  *http.Server
+	port    int
+	closeFn []func() error
 }
 
 func NewRestApi(port int) *restapi {
@@ -48,15 +36,61 @@ func NewRestApi(port int) *restapi {
 		UseOtel: false,
 	})
 
-	router := router{}
+	restApi := &restapi{
+		port:    port,
+		closeFn: make([]func() error, 0),
+	}
 
-	srv := &http.Server{
+	restApi.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: restapigen.HandlerFromMux(router, handler),
+		Handler: restapigen.HandlerFromMux(restApi.load(), handler),
 	}
 
-	return &restapi{
-		server: srv,
-		port:   port,
+	return restApi
+}
+
+func (r *restapi) Shutdown(ctx context.Context) error {
+	errs := make([]error, 0, len(r.closeFn))
+
+	err := r.server.Shutdown(ctx)
+	if err != nil {
+		errs = append(errs, err)
 	}
+
+	for _, v := range r.closeFn {
+		if err = v(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}
+
+func (r *restapi) Start() {
+	fmt.Println("REST API listening on", r.server.Addr)
+	err := r.server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error(err.Error())
+	}
+}
+
+func (r *restapi) load() router {
+	db, err := provider.NewDB()
+	if err != nil {
+		panic(err)
+	}
+	r.closeFn = append(r.closeFn, db.Close)
+
+	healthcheckRepo := healthcheckrepository.NewRepository(db)
+	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
+
+	router := router{
+		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
+	}
+
+	return router
 }
