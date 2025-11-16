@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package healthcheck;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "erp-directory-service/gen/grpc/healthcheck";
+
+// ServiceStatus represents the overall health status of the service
+enum ServiceStatus {
+  HEALTH_CHECK_SERVICE_STATUS_HEALTHY = 0;
+  HEALTH_CHECK_SERVICE_STATUS_DEGRADED = 1;
+  HEALTH_CHECK_SERVICE_STATUS_UNHEALTHY = 2;
+}
+
+// DependencyStatus represents the status of a dependency
+enum DependencyStatus {
+  HEALTH_CHECK_DEPENDENCY_STATUS_OK = 0;
+  HEALTH_CHECK_DEPENDENCY_STATUS_ERROR = 1;
+}
+
+// HealthCheckService provides health check functionality
+service HealthCheckService {
+  // ApiV1HealthCheck returns the health status of the service
+  rpc ApiV1HealthCheck(ApiV1HealthCheckRequest) returns (ApiV1HealthCheckResponse) {}
+}
+
+// ApiV1HealthCheckRequest is the request message for health check
+message ApiV1HealthCheckRequest {}
+
+// HealthCheckResponse is the response message containing health status
+message ApiV1HealthCheckResponse {
+  // Status of the service (healthy, degraded, unhealthy)
+  ServiceStatus status = 1;
+  
+  // Timestamp when the health check was performed
+  google.protobuf.Timestamp timestamp = 2;
+  
+  // Dependencies contains health status of service dependencies
+  ApiV1HealthCheckDependencies dependencies = 3;
+}
+
+// Dependencies contains health status of all service dependencies
+message ApiV1HealthCheckDependencies {
+  // Database dependency status
+  ApiV1HealthCheckDependency database = 1;
+}
+
+// Dependency represents the health status of a single dependency
+message ApiV1HealthCheckDependency {
+  // Status of the dependency (ok, error)
+  DependencyStatus status = 1;
+  
+  // Response time in milliseconds
+  string response_time = 2;
+  
+  // Message describing the dependency status
+  string message = 3;
+}

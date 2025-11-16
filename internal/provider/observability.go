@@ -13,14 +13,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewLogging(slogHookOption, zerologHookOption string) func() error {
+func NewLogging(filename, slogHookOption, zerologHookOption string) func() error {
 	appConfig := config.GetApp()
 	closeFn := make([]func(), 0, 2)
 
 	var slogHook io.Writer
 	switch slogHookOption {
 	case "file-writer":
-		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-secondary.log", appConfig.Name), 10, 2, 30, true)
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-secondary.log", filename), 10, 2, 30, true)
 		slogHook = rotatingWriter
 		closeFn = append(closeFn, rotatingWriter.Close)
 	case "std-out":
@@ -32,7 +32,7 @@ func NewLogging(slogHookOption, zerologHookOption string) func() error {
 	var zerologHook io.Writer
 	switch zerologHookOption {
 	case "file-writer":
-		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-primary.log", appConfig.Name), 10, 2, 30, true)
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-primary.log", filename), 10, 2, 30, true)
 		zerologHook = rotatingWriter
 		closeFn = append(closeFn, rotatingWriter.Close)
 	case "std-out":

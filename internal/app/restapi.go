@@ -43,7 +43,7 @@ func NewRestApi(port int) *restapi {
 
 	restApi.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: restapigen.HandlerFromMux(restApi.load(), handler),
+		Handler: restapigen.HandlerFromMux(restApi.init(), handler),
 	}
 
 	return restApi
@@ -71,14 +71,14 @@ func (r *restapi) Shutdown(ctx context.Context) error {
 }
 
 func (r *restapi) Start() {
-	fmt.Println("REST API listening on", r.server.Addr)
+	slog.Info(fmt.Sprintf("REST API listening on %s", r.server.Addr))
 	err := r.server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error(err.Error())
 	}
 }
 
-func (r *restapi) load() router {
+func (r *restapi) init() routerRestApi {
 	db, err := provider.NewDB()
 	if err != nil {
 		panic(err)
@@ -88,7 +88,7 @@ func (r *restapi) load() router {
 	healthcheckRepo := healthcheckrepository.NewRepository(db)
 	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
 
-	router := router{
+	router := routerRestApi{
 		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
 	}
 

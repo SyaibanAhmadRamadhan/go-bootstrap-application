@@ -11,6 +11,7 @@ func main() {
 	}
 
 	root.AddCommand(newRestApiCmd())
+	root.AddCommand(newGrpcApiCmd())
 	err := root.Execute()
 	if err != nil {
 		panic(err)

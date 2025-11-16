@@ -7,7 +7,7 @@ our public-facing API and the external API that we consume.
 
 The directory structure of the API directory is as follows:
 
-```
+```sh
 /
 ├── proto This directory contains the protocol buffer definitions for interoperability with other internal services.
 ├── provider This directory contains the OpenAPI specification of the API that we consume, if they don't have any Go SDK.

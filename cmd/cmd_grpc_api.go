@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newRestApiCmd() *cobra.Command {
+func newGrpcApiCmd() *cobra.Command {
 	preRunClosed := make([]func() error, 0, 1)
 	var shutdownServer func(ctx context.Context) error
 
@@ -22,10 +22,10 @@ func newRestApiCmd() *cobra.Command {
 	var zerologHook string
 
 	cmd := &cobra.Command{
-		Use:   "restapi",
+		Use:   "grpcapi",
 		Short: "Run the server",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			preRunClosed = append(preRunClosed, provider.NewLogging("restapi", slogHook, zerologHook))
+			preRunClosed = append(preRunClosed, provider.NewLogging("grpcapi", slogHook, zerologHook))
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			graceful.Shutdown(func(ctx context.Context) error {
@@ -46,10 +46,10 @@ func newRestApiCmd() *cobra.Command {
 			}, 30*time.Second, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			restApi := app.NewRestApi(port)
-			shutdownServer = restApi.Shutdown
+			grpcApi := app.NewGrpcApi(port)
+			shutdownServer = grpcApi.Shutdown
 			go func() {
-				restApi.Start()
+				grpcApi.Start()
 			}()
 		},
 	}

@@ -1,7 +1,10 @@
 .PHONY: run clean 
 
-run:
+run-restapi:
 	cd cmd && go run . restapi -s std-out -z file-writer
+
+run-grpcapi:
+	cd cmd && go run . grpcapi -s std-out -z file-writer
 
 generate_api: api/openapi/api.yaml
 	npx openapi-format api/openapi/api.yaml -s api/openapi/openapi-sort.json -f api/openapi/openapi-filter.json -o api/openapi/api.yaml

@@ -2,6 +2,12 @@ package domainhealthcheck
 
 type StatusHealthCheck string
 
+const (
+	StatusHealthCheckHealthy   StatusHealthCheck = "healthy"
+	StatusHealthCheckDegraded  StatusHealthCheck = "degraded"
+	StatusHealthCheckUnhealthy StatusHealthCheck = "unhealthy"
+)
+
 func NewStatusHealthCheck(dependencyStatus ...StatusDependency) (output StatusHealthCheck) {
 	if len(dependencyStatus) == 0 {
 		return "degraded"

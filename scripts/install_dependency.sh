@@ -4,6 +4,8 @@ install_go_dependencies() {
     go get -tool  go.uber.org/mock/mockgen@latest
     go get -tool github.com/securego/gosec/v2/cmd/gosec@latest
     go get -tool github.com/google/wire/cmd/wire@latest
+    go get -tool go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+    go get -tool go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 }
 
 install_npm_dependencies() {
