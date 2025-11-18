@@ -28,7 +28,7 @@ The project follows a clean architecture pattern with clear separation of concer
 │   ├── app/               # Application initialization
 │   ├── config/            # Configuration management
 │   ├── gen/               # Auto-generated code
-│   └── provider/          # Infrastructure providers
+│   └── infrastructure/    # Infrastructure setup (DB, logging, observability)
 └── scripts/               # Build & deployment scripts
 ```
 
@@ -259,12 +259,14 @@ Auto-generated code (excluded from git):
 
 **Important:** Run `make generate` after cloning to generate these files.
 
-### Infrastructure Providers (`internal/provider/`)
+### Infrastructure (`internal/infrastructure/`)
 
-Infrastructure and cross-cutting concerns:
+Infrastructure setup and cross-cutting concerns:
 
-- `database.go` - Database connection management
-- `observability.go` - Logging and monitoring setup
+- `database.go` - Database connection management with auto-config reading
+- `observability.go` - Logging and observability setup (slog, zerolog, rotating files)
+
+The infrastructure layer automatically reads configuration from `config` package using context-aware getters (`GetDatabase()`, `GetDebugMode()`, `GetAppName()`, etc.).
 
 ### Worker Handlers (`internal/worker/`)
 

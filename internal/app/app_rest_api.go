@@ -4,9 +4,9 @@ import (
 	"context"
 	"erp-directory-service/internal/config"
 	"erp-directory-service/internal/gen/restapigen"
+	"erp-directory-service/internal/infrastructure"
 	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
 	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
-	"erp-directory-service/internal/provider"
 	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
 	"errors"
 	"fmt"
@@ -18,10 +18,9 @@ import (
 )
 
 type restApiApp struct {
-	server    *http.Server
-	port      int
-	closeFn   []func() error
-	debugMode bool
+	server  *http.Server
+	port    int
+	closeFn []func() error
 }
 
 func NewRestApiApp(port int) *restApiApp {
@@ -44,9 +43,8 @@ func NewRestApiApp(port int) *restApiApp {
 	})
 
 	restapiApp := &restApiApp{
-		port:      port,
-		closeFn:   make([]func() error, 0),
-		debugMode: appCfg.DebugMode,
+		port:    port,
+		closeFn: make([]func() error, 0),
 	}
 
 	restapiApp.server = &http.Server{
@@ -87,7 +85,7 @@ func (r *restApiApp) Start() {
 }
 
 func (r *restApiApp) init(c *chi.Mux) routerRestApi {
-	db, err := provider.NewDB(r.debugMode)
+	db, err := infrastructure.NewDB()
 	if err != nil {
 		panic(err)
 	}

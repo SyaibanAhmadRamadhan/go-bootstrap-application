@@ -4,9 +4,9 @@ import (
 	"context"
 	"erp-directory-service/internal/config"
 	"erp-directory-service/internal/gen/grpcgen/healthcheck"
+	"erp-directory-service/internal/infrastructure"
 	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
 	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
-	"erp-directory-service/internal/provider"
 	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
 	"errors"
 	"fmt"
@@ -19,11 +19,10 @@ import (
 )
 
 type grpcApiApp struct {
-	server    *grpc.Server
-	port      int
-	listener  net.Listener
-	closeFn   []func() error
-	debugMode bool
+	server   *grpc.Server
+	port     int
+	listener net.Listener
+	closeFn  []func() error
 }
 
 func NewGrpcApiApp(port int) *grpcApiApp {
@@ -40,11 +39,10 @@ func NewGrpcApiApp(port int) *grpcApiApp {
 	s := grpc.NewServer()
 
 	grpcApp := &grpcApiApp{
-		port:      port,
-		listener:  lis,
-		server:    s,
-		closeFn:   make([]func() error, 0),
-		debugMode: appCfg.DebugMode,
+		port:     port,
+		listener: lis,
+		server:   s,
+		closeFn:  make([]func() error, 0),
 	}
 
 	grpcApp.init()
@@ -57,7 +55,7 @@ func (r *grpcApiApp) Shutdown(ctx context.Context) error {
 
 	r.server.GracefulStop()
 	err := r.listener.Close()
-	if err != nil {
+	if err != nil && !errors.Is(err, net.ErrClosed) {
 		errs = append(errs, err)
 	}
 
@@ -82,7 +80,7 @@ func (r *grpcApiApp) Start() {
 }
 
 func (r *grpcApiApp) init() {
-	db, err := provider.NewDB(r.debugMode)
+	db, err := infrastructure.NewDB()
 	if err != nil {
 		panic(err)
 	}

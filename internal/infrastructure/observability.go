@@ -1,7 +1,8 @@
-package provider
+package infrastructure
 
 import (
 	"context"
+	"erp-directory-service/internal/config"
 	"fmt"
 	"io"
 	"os"
@@ -12,13 +13,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewLogging(filename, slogHookOption, zerologHookOption string, debugMode bool, env string, serviceName string) func() error {
+func NewLogging(slogHookOption, zerologHookOption string) func() error {
 	closeFn := make([]func(), 0, 2)
 
 	var slogHook io.Writer
 	switch slogHookOption {
 	case "file-writer":
-		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-secondary.log", filename), 10, 2, 30, true)
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-secondary.log", config.GetAppName()), 10, 2, 30, true)
 		slogHook = rotatingWriter
 		closeFn = append(closeFn, rotatingWriter.Close)
 	case "std-out":
@@ -30,7 +31,7 @@ func NewLogging(filename, slogHookOption, zerologHookOption string, debugMode bo
 	var zerologHook io.Writer
 	switch zerologHookOption {
 	case "file-writer":
-		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-primary.log", filename), 10, 2, 30, true)
+		rotatingWriter := loghook.NewRotatingWriter(fmt.Sprintf("%s-primary.log", config.GetAppName()), 10, 2, 30, true)
 		zerologHook = rotatingWriter
 		closeFn = append(closeFn, rotatingWriter.Close)
 	case "std-out":
@@ -43,9 +44,9 @@ func NewLogging(filename, slogHookOption, zerologHookOption string, debugMode bo
 		ZerologHook: zerologHook,
 		SlogHook:    slogHook,
 		Mode:        "json",
-		Level:       generic.Ternary(env == "development", "debug", "info"),
-		Env:         env,
-		ServiceName: serviceName,
+		Level:       generic.Ternary(config.GetEnv() == "development", "debug", "info"),
+		Env:         config.GetEnv(),
+		ServiceName: config.GetAppName(),
 	})
 	observability.Start(context.Background(), zerolog.InfoLevel).Msg("init logging successfully")
 

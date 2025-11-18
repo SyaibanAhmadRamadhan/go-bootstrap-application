@@ -1,12 +1,12 @@
 package healthcheckrepository
 
-import "erp-directory-service/internal/provider"
+import "erp-directory-service/internal/infrastructure"
 
 type repository struct {
-	db provider.DB
+	db infrastructure.DB
 }
 
-func NewRepository(db provider.DB) *repository {
+func NewRepository(db infrastructure.DB) *repository {
 	return &repository{
 		db: db,
 	}

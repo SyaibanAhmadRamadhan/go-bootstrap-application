@@ -4,7 +4,7 @@ import (
 	"context"
 	"erp-directory-service/internal/app"
 	"erp-directory-service/internal/config"
-	"erp-directory-service/internal/provider"
+	infratructure "erp-directory-service/internal/infrastructure"
 	"errors"
 	"syscall"
 	"time"
@@ -26,14 +26,8 @@ func newGrpcApiCmd() *cobra.Command {
 		Use:   "grpcapi",
 		Short: "Run the server",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			appCfg := config.GetAppGrpcApi()
-
-			app.StartPprofServer(cmd.Name())
-			closeLogging := provider.NewLogging(
-				"grpcapi",
-				slogHookOption, zerologHookOption,
-				appCfg.DebugMode, appCfg.Env, appCfg.Name,
-			)
+			app.StartPprofServer()
+			closeLogging := infratructure.NewLogging(slogHookOption, zerologHookOption)
 
 			preRunClosed = append(preRunClosed, closeLogging)
 			preRunClosed = append(preRunClosed, config.UnwatchLoader)

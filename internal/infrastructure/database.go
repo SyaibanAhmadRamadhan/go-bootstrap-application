@@ -1,4 +1,4 @@
-package provider
+package infrastructure
 
 import (
 	"database/sql"
@@ -15,7 +15,7 @@ type DB struct {
 	sqlDB *sql.DB
 }
 
-func NewDB(debugMode bool) (DB, error) {
+func NewDB() (DB, error) {
 	cfg := config.GetDatabase()
 
 	db, err := sql.Open("mysql", cfg.DSN)
@@ -40,7 +40,7 @@ func NewDB(debugMode bool) (DB, error) {
 	)
 
 	rdbms := sqlx.NewRDBMS(db,
-		sqlx.UseDebug(debugMode),
+		sqlx.UseDebug(config.GetDebugMode()),
 	)
 
 	return DB{

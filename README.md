@@ -84,7 +84,7 @@ make clean             # Clean generated files and artifacts
 │   ├── module/            # Business logic implementation
 │   │   ├── <feature>/repository/  # Data access layer
 │   │   └── <feature>/service/     # Business logic layer
-│   ├── provider/          # Infrastructure providers (DB, logging)
+│   ├── infrastructure/    # Infrastructure setup (DB, logging, observability)
 │   ├── transport/         # HTTP/gRPC handlers
 │   └── worker/            # Background jobs & schedulers
 ├── scripts/               # Build & deployment scripts
@@ -213,7 +213,7 @@ See [Configuration Guide](docs/CONFIGURATION.md) for details.
 
 ### Pprof Profiling
 
-Each application has built-in pprof support with realtime hot-reload:
+Each application has built-in pprof support with realtime hot-reload and authentication:
 
 ```bash
 # Enable pprof in env.json
@@ -221,28 +221,33 @@ Each application has built-in pprof support with realtime hot-reload:
     "app_rest_api": {
         "pprof": {
             "enable": true,
-            "port": 8080
+            "port": 8080,
+            "static_token": "your-secret-token"
         }
     }
 }
 
-# Access pprof endpoints
-curl http://localhost:8080/debug/pprof/heap
-curl http://localhost:8080/debug/pprof/goroutine
-open http://localhost:8080/debug/pprof/
+# Access pprof endpoints (authentication required)
+curl -H "Authotization: your-secret-token" http://localhost:8080/debug/pprof/heap
+curl -H "Authotization: your-secret-token" http://localhost:8080/debug/pprof/goroutine
+
+# Or set header in browser/tools
+open http://localhost:8080/debug/pprof/  # Add header: Authotization: your-secret-token
 ```
 
 ### Memory Leak Detection
 
 ```bash
-# Capture baseline
-curl http://localhost:8080/debug/pprof/heap > heap_before.prof
+# Capture baseline (with authentication)
+curl -H "Authotization: your-secret-token" \
+  http://localhost:8080/debug/pprof/heap > heap_before.prof
 
 # Run load test
 hey -n 10000 -c 100 http://localhost:8080/api/v1/healthcheck
 
 # Capture after load
-curl http://localhost:8080/debug/pprof/heap > heap_after.prof
+curl -H "Authotization: your-secret-token" \
+  http://localhost:8080/debug/pprof/heap > heap_after.prof
 
 # Compare profiles
 go tool pprof -base=heap_before.prof heap_after.prof

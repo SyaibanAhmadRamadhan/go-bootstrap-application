@@ -91,19 +91,45 @@ Each application (REST API, gRPC API, Scheduler) has its own independent configu
 
 ### Database Configuration
 
-**`database`:**
+Each application has its own database configuration nested within its config:
 
 ```json
 {
-    "database": {
-        "dsn": "user:password@tcp(host:port)/dbname?parseTime=true",
-        "max_open_conns": 25,        // Maximum open connections
-        "max_idle_conns": 25,        // Maximum idle connections
-        "conn_max_lifetime": "300s", // Connection max lifetime
-        "conn_max_idle_time": "60s"  // Connection max idle time
+    "app_rest_api": {
+        "database": {
+            "dsn": "user:password@tcp(localhost:3306)/dbname?parseTime=true",
+            "max_open_conns": 25,
+            "max_idle_conns": 25,
+            "conn_max_lifetime": "300s",
+            "conn_max_idle_time": "60s"
+        }
+    },
+    "app_grpc_api": {
+        "database": {
+            "dsn": "user:password@tcp(localhost:3306)/dbname?parseTime=true",
+            "max_open_conns": 25,
+            "max_idle_conns": 25,
+            "conn_max_lifetime": "300s",
+            "conn_max_idle_time": "60s"
+        }
+    },
+    "app_scheduler": {
+        "database": {
+            "dsn": "user:password@tcp(localhost:3306)/dbname?parseTime=true",
+            "max_open_conns": 25,
+            "max_idle_conns": 25,
+            "conn_max_lifetime": "300s",
+            "conn_max_idle_time": "60s"
+        }
     }
 }
 ```
+
+**Why Nested Database Config?**
+
+- Each service can connect to different databases if needed
+- Independent connection pool settings per service
+- Better isolation and flexibility for microservices architecture
 
 ## Pprof Configuration (Realtime Hot-Reload)
 
@@ -158,17 +184,22 @@ The pprof server monitors configuration changes and automatically starts/stops b
 
    **Important:** The restart trigger is based on changes to the `enable` flag. Direct port changes without toggling `enable` will not take effect.
 
-### Accessing Pprof Endpoints
+**Accessing Pprof Endpoints:**
+
+All pprof endpoints require authentication via `Authotization` header (note: typo in header name is intentional - matches code):
 
 ```bash
 # REST API pprof (port 8080)
-curl http://localhost:8080/debug/pprof/heap
+curl -H "Authotization: your-secret-token" \
+  http://localhost:8080/debug/pprof/heap
 
 # gRPC API pprof (port 7070)
-curl http://localhost:7070/debug/pprof/goroutine
+curl -H "Authotization: your-secret-token" \
+  http://localhost:7070/debug/pprof/goroutine
 
 # Scheduler pprof (port 6060)
-open http://localhost:6060/debug/pprof/
+curl -H "Authotization: your-secret-token" \
+  http://localhost:6060/debug/pprof/
 
 # Available endpoints:
 # /debug/pprof/          - Index page
@@ -208,11 +239,11 @@ open http://localhost:6060/debug/pprof/
 
 ```go
 // In cmd layer - Application startup (cmd.go PersistentPreRun)
-config.LoadConfig("app_rest_api.debug_mode")  // Initialize with hot-reload key
-appCfg := config.GetAppRestApi()               // Get REST API config
+config.LoadConfig("restapi")  // Initialize with command name
+appCfg := config.GetAppRestApi() // Get REST API config
 ```
 
-**Hot-Reload Key:** The parameter `"app_rest_api.debug_mode"` tells the config loader to watch for changes to this specific key. When `debug_mode` changes, the config automatically reloads.
+**Command Name:** The parameter `"restapi"` (or `"grpcapi"`, `"scheduler"`) tells the config loader which app config to use and watches for changes to its `debug_mode`. When `debug_mode` changes, the config automatically reloads.
 
 ### 3. Config Types
 
@@ -225,13 +256,11 @@ appCfg := config.GetAppRestApi()               // Get REST API config
 
 ```go
 // In cmd layer - Application startup
-appCfg := config.GetAppRestApi()
-provider.NewLogging(filename, slogHook, zerologHook, 
-                    appCfg.DebugMode, appCfg.Env, appCfg.Name)
+config.LoadConfig("restapi")  // Set command context
+infrastructure.NewLogging(slogHookOption, zerologHookOption)  // Auto-reads config
 
 // In app layer - Feature initialization
-appCfg := config.GetAppRestApi()
-db := provider.NewDB(appCfg.DebugMode)
+db, err := infrastructure.NewDB()  // Auto-reads config based on cmd context
 ```
 
 ### Configuration Flow
@@ -242,13 +271,24 @@ env.json → LoadConfig() → root struct → Getter functions → Application
 
 ### Getter Functions
 
-- `config.GetAppRestApi()` - Get REST API config (includes nested pprof)
-- `config.GetAppGrpcApi()` - Get gRPC API config (includes nested pprof)
-- `config.GetAppScheduler()` - Get Scheduler config (includes nested pprof)
-- `config.GetPprofAppRestApi()` - Get pprof config for REST API only
-- `config.GetPprofAppGrpcApi()` - Get pprof config for gRPC API only
-- `config.GetPprofAppScheduler()` - Get pprof config for Scheduler only
-- `config.GetDatabase()` - Get database config
+**App Config Getters:**
+
+- `config.GetAppRestApi()` - Get complete REST API config (includes nested pprof & database)
+- `config.GetAppGrpcApi()` - Get complete gRPC API config (includes nested pprof & database)
+- `config.GetAppScheduler()` - Get complete Scheduler config (includes nested pprof & database)
+
+**Dynamic Context-Aware Getters:**
+
+These functions automatically return the config for the currently running application based on the `cmdName` set during `LoadConfig()`:
+
+- `config.GetPprof()` - Get pprof config for current app
+- `config.GetDatabase()` - Get database config for current app
+- `config.GetDebugMode()` - Get debug mode for current app
+- `config.GetAppName()` - Get app name for current app
+- `config.GetEnv()` - Get environment for current app
+
+**Utility:**
+
 - `config.UnwatchLoader()` - Stop watching config file (called on shutdown)
 
 ### Why This Design?

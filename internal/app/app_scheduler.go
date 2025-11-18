@@ -3,9 +3,9 @@ package app
 import (
 	"context"
 	"erp-directory-service/internal/config"
+	"erp-directory-service/internal/infrastructure"
 	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
 	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
-	"erp-directory-service/internal/provider"
 	workerhealthcheck "erp-directory-service/internal/worker/healthcheck"
 	"errors"
 	"log/slog"
@@ -15,18 +15,14 @@ import (
 )
 
 type schedulerApp struct {
-	cron      *cron.Cron
-	closeFn   []func() error
-	debugMode bool
+	cron    *cron.Cron
+	closeFn []func() error
 }
 
 func NewSchedulerApp() *schedulerApp {
-	appCfg := config.GetAppScheduler()
-
 	schedulerApp := &schedulerApp{
-		cron:      cron.New(cron.WithSeconds()),
-		closeFn:   make([]func() error, 0),
-		debugMode: appCfg.DebugMode,
+		cron:    cron.New(cron.WithSeconds()),
+		closeFn: make([]func() error, 0),
 	}
 
 	schedulerApp.init()
@@ -67,7 +63,7 @@ func (s *schedulerApp) Shutdown(ctx context.Context) error {
 }
 
 func (s *schedulerApp) init() {
-	db, err := provider.NewDB(s.debugMode)
+	db, err := infrastructure.NewDB()
 	if err != nil {
 		panic(err)
 	}

@@ -4,11 +4,20 @@ This document provides detailed examples for implementing workers, schedulers, a
 
 ## Table of Contents
 
-- [Scheduler (Cron Jobs)](#scheduler-cron-jobs)
-- [How Scheduler Works](#how-scheduler-works)
-- [Cron Expression Format](#cron-expression-format)
-- [Common Cron Expressions](#common-cron-expressions)
-- [Complete Example](#complete-example)
+- [Worker Layer Examples](#worker-layer-examples)
+  - [Table of Contents](#table-of-contents)
+  - [Scheduler (Cron Jobs)](#scheduler-cron-jobs)
+    - [Basic Example](#basic-example)
+  - [How Scheduler Works](#how-scheduler-works)
+    - [Scheduler App Implementation](#scheduler-app-implementation)
+  - [Cron Expression Format](#cron-expression-format)
+    - [Special Characters](#special-characters)
+  - [Common Cron Expressions](#common-cron-expressions)
+  - [Complete Example](#complete-example)
+    - [Worker Implementation](#worker-implementation)
+    - [Scheduler App with Multiple Jobs](#scheduler-app-with-multiple-jobs)
+    - [Configuration Example](#configuration-example)
+  - [Best Practices](#best-practices)
 
 ## Scheduler (Cron Jobs)
 
@@ -115,7 +124,11 @@ func NewSchedulerApp() *schedulerApp {
     appCfg := config.GetAppScheduler()
     
     // Initialize database and services (dependency injection)
-    db := provider.NewDB(appCfg.DebugMode)
+    db, err := infrastructure.NewDB()
+    if err != nil {
+        slog.Error("Failed to initialize database", "error", err)
+        panic(err)
+    }
     
     // Create repositories
     healthcheckRepo := healthcheckrepository.NewRepository(db)

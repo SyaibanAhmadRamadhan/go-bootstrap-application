@@ -6,31 +6,33 @@ type root struct {
 	AppRestApi   AppRestApi   `env:"app_rest_api"`
 	AppGrpcApi   AppGrpcApi   `env:"app_grpc_api"`
 	AppScheduler AppScheduler `env:"app_scheduler"`
-	Database     Database     `env:"database"`
 }
 
 type AppRestApi struct {
-	Name      string `env:"name"`
-	Env       string `env:"env"`
-	DebugMode bool   `env:"debug_mode"`
-	Port      int    `env:"port"`
-	Pprof     Pprof  `env:"pprof"`
+	Name      string   `env:"name"`
+	Env       string   `env:"env"`
+	DebugMode bool     `env:"debug_mode"`
+	Port      int      `env:"port"`
+	Pprof     Pprof    `env:"pprof"`
+	Database  Database `env:"database"`
 }
 
 type AppGrpcApi struct {
-	Name      string `env:"name"`
-	Env       string `env:"env"`
-	DebugMode bool   `env:"debug_mode"`
-	Port      int    `env:"port"`
-	Pprof     Pprof  `env:"pprof"`
+	Name      string   `env:"name"`
+	Env       string   `env:"env"`
+	DebugMode bool     `env:"debug_mode"`
+	Port      int      `env:"port"`
+	Pprof     Pprof    `env:"pprof"`
+	Database  Database `env:"database"`
 }
 
 type AppScheduler struct {
-	Name                string `env:"name"`
-	Env                 string `env:"env"`
-	DebugMode           bool   `env:"debug_mode"`
-	HealthCheckInterval string `env:"healthcheck_interval"`
-	Pprof               Pprof  `env:"pprof"`
+	Name                string   `env:"name"`
+	Env                 string   `env:"env"`
+	DebugMode           bool     `env:"debug_mode"`
+	HealthCheckInterval string   `env:"healthcheck_interval"`
+	Pprof               Pprof    `env:"pprof"`
+	Database            Database `env:"database"`
 }
 
 type Pprof struct {

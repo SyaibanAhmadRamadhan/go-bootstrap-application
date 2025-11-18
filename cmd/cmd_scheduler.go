@@ -4,7 +4,7 @@ import (
 	"context"
 	"erp-directory-service/internal/app"
 	"erp-directory-service/internal/config"
-	"erp-directory-service/internal/provider"
+	"erp-directory-service/internal/infrastructure"
 	"errors"
 	"syscall"
 	"time"
@@ -25,14 +25,8 @@ func newCmdScheduler() *cobra.Command {
 		Use:   "scheduler",
 		Short: "Run the scheduler",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			appCfg := config.GetAppScheduler()
-
-			app.StartPprofServer(cmd.Name())
-			closeLogging := provider.NewLogging(
-				"scheduler",
-				slogHookOption, zerologHookOption,
-				appCfg.DebugMode, appCfg.Env, appCfg.Name,
-			)
+			app.StartPprofServer()
+			closeLogging := infrastructure.NewLogging(slogHookOption, zerologHookOption)
 
 			preRunClosed = append(preRunClosed, closeLogging)
 			preRunClosed = append(preRunClosed, config.UnwatchLoader)

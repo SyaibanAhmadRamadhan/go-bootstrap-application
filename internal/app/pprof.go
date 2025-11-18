@@ -14,7 +14,7 @@ import (
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/confy"
 )
 
-func StartPprofServer(cmdName string) {
+func StartPprofServer() {
 	handler := http.NewServeMux()
 	registerPprof(handler)
 
@@ -23,7 +23,7 @@ func StartPprofServer(cmdName string) {
 	}
 	isRunning := uint32(0)
 
-	pprofConfig := getPprofConfig(cmdName)
+	pprofConfig := config.GetPprof()
 	if pprofConfig.Enable && atomic.LoadUint32(&isRunning) == 0 {
 		httpServer.Addr = fmt.Sprintf(":%d", pprofConfig.Port)
 
@@ -40,7 +40,7 @@ func StartPprofServer(cmdName string) {
 	_, confySubsribetionSignal := confy.Subscribe()
 	go func() {
 		for range confySubsribetionSignal {
-			pprofConfig := getPprofConfig(cmdName)
+			pprofConfig := config.GetPprof()
 			if pprofConfig.Enable && atomic.LoadUint32(&isRunning) == 0 {
 				httpServer.Addr = fmt.Sprintf(":%d", pprofConfig.Port)
 
@@ -67,29 +67,33 @@ func StartPprofServer(cmdName string) {
 }
 
 func registerPprof(mux *http.ServeMux) {
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	mux.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
-	mux.Handle("/debug/pprof/block", pprof.Handler("block"))
-	mux.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
-	mux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	mux.Handle("/debug/pprof/", authMiddlewarePprof(http.HandlerFunc(pprof.Index)))
+	mux.Handle("/debug/pprof/cmdline", authMiddlewarePprof(http.HandlerFunc(pprof.Cmdline)))
+	mux.Handle("/debug/pprof/profile", authMiddlewarePprof(http.HandlerFunc(pprof.Profile)))
+	mux.Handle("/debug/pprof/symbol", authMiddlewarePprof(http.HandlerFunc(pprof.Symbol)))
+	mux.Handle("/debug/pprof/trace", authMiddlewarePprof(http.HandlerFunc(pprof.Trace)))
+
+	mux.Handle("/debug/pprof/heap", authMiddlewarePprof(pprof.Handler("heap")))
+	mux.Handle("/debug/pprof/goroutine", authMiddlewarePprof(pprof.Handler("goroutine")))
+	mux.Handle("/debug/pprof/threadcreate", authMiddlewarePprof(pprof.Handler("threadcreate")))
+	mux.Handle("/debug/pprof/block", authMiddlewarePprof(pprof.Handler("block")))
+	mux.Handle("/debug/pprof/allocs", authMiddlewarePprof(pprof.Handler("allocs")))
+	mux.Handle("/debug/pprof/mutex", authMiddlewarePprof(pprof.Handler("mutex")))
 }
 
-func getPprofConfig(cmdName string) config.Pprof {
-	switch cmdName {
-	case "scheduler":
-		return config.GetPprofAppScheduler()
-	case "restapi":
-		return config.GetPprofAppRestApi()
-	case "grpcapi":
-		return config.GetPprofAppGrpcApi()
-	default:
-		slog.Error("unknown cmd name for get pprof config")
-		return config.Pprof{}
-	}
+func authMiddlewarePprof(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authotization")
+		if token == "" {
+			http.Error(w, "missing token", http.StatusUnauthorized)
+			return
+		}
+
+		if token != config.GetPprof().StaticToken {
+			http.Error(w, "invalid token", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

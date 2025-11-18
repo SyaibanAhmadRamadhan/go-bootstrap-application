@@ -50,27 +50,42 @@ The application will run pprof endpoints on the same port as your REST API.
 
 ### 1.2 Access pprof Endpoints
 
-Open browser or use curl (replace `<PORT>` with your application port, default is usually 8080):
+**Important:** All pprof endpoints require authentication via `Authotization` header with the static token configured in `env.json`.
+
+Using curl (replace `<PORT>` with your application port, default is usually 8080):
 
 ```bash
+# Set your token from env.json
+export PPROF_TOKEN="your-secret-token"
+
 # Heap profile (memory allocation)
-http://localhost:<PORT>/debug/pprof/heap
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/heap
 
 # Goroutine profile
-http://localhost:<PORT>/debug/pprof/goroutine
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/goroutine
 
 # All available profiles
-http://localhost:<PORT>/debug/pprof/
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/
 ```
 
-**Note:** pprof endpoints are available on the same port as your REST API, not on port 6060.
+**Notes:**
+
+- pprof endpoints are available on the same port as your REST API, not on port 6060
+- Authentication is required for security - configure `static_token` in your app's pprof config
+- Header name is `Authotization` (matches code implementation)
 
 ### 1.3 Capture Heap Profile (Before Load Test)
 
 ```bash
-# Capture baseline heap profile
-curl http://localhost:<PORT>/debug/pprof/heap > heap_before.prof
+# Capture baseline heap profile (authentication required)
+curl -H "Authotization: your-secret-token" \
+  http://localhost:<PORT>/debug/pprof/heap > heap_before.prof
 ```
+
+**Note:** Replace `your-secret-token` with the actual token from `env.json` pprof config.
 
 ### 1.4 Generate Load Test
 
@@ -90,8 +105,9 @@ hey -n 10000 -c 100 http://localhost:<PORT>/api/v1/healthcheck
 # Wait a few seconds for GC to run
 sleep 5
 
-# Capture heap profile after load test
-curl http://localhost:<PORT>/debug/pprof/heap > heap_after.prof
+# Capture heap profile after load test (authentication required)
+curl -H "Authotization: your-secret-token" \
+  http://localhost:<PORT>/debug/pprof/heap > heap_after.prof
 ```
 
 ### 1.6 Analyze Memory Profile
@@ -138,15 +154,24 @@ go tool pprof -base=heap_before.prof -png heap_after.prof > heap_diff.png
 
 ### 1.7 Continuous Profiling
 
-For monitoring real-time:
+For monitoring real-time (authentication required):
 
 ```bash
-# Open pprof web UI
-go tool pprof -http=:8080 http://localhost:<PORT>/debug/pprof/heap
+# Set environment variable for auth header
+export PPROF_TOKEN="your-secret-token"
 
-# Or use allocs to see all allocations
-go tool pprof -http=:8080 http://localhost:<PORT>/debug/pprof/allocs
+# Open pprof web UI with custom fetcher
+go tool pprof -http=:8080 \
+  -fetch_timeout=30s \
+  "http://localhost:<PORT>/debug/pprof/heap?token=${PPROF_TOKEN}"
+
+# Alternative: Use curl to fetch then analyze
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/heap > heap.prof
+go tool pprof -http=:8080 heap.prof
 ```
+
+**Note:** go tool pprof doesn't support custom headers directly, so use curl to fetch profiles first or configure token in URL if your implementation supports it.
 
 ## Method 2: Check Goroutine Leaks
 
@@ -155,12 +180,14 @@ Goroutine leaks can also cause memory leaks.
 ### 2.1 Check Goroutine Count
 
 ```bash
-# Before load test
-curl http://localhost:<PORT>/debug/pprof/goroutine?debug=1 > goroutine_before.txt
+# Before load test (authentication required)
+curl -H "Authotization: your-secret-token" \
+  http://localhost:<PORT>/debug/pprof/goroutine?debug=1 > goroutine_before.txt
 
 # After load test and wait a few seconds
 sleep 10
-curl http://localhost:<PORT>/debug/pprof/goroutine?debug=1 > goroutine_after.txt
+curl -H "Authotization: your-secret-token" \
+  http://localhost:<PORT>/debug/pprof/goroutine?debug=1 > goroutine_after.txt
 
 # Compare
 diff goroutine_before.txt goroutine_after.txt
@@ -169,8 +196,9 @@ diff goroutine_before.txt goroutine_after.txt
 ### 2.2 Analyze Goroutine Profile
 
 ```bash
-# Capture goroutine profile
-curl http://localhost:<PORT>/debug/pprof/goroutine > goroutine.prof
+# Capture goroutine profile (authentication required)
+curl -H "Authotization: your-secret-token" \
+  http://localhost:<PORT>/debug/pprof/goroutine > goroutine.prof
 
 # Analyze
 go tool pprof goroutine.prof
@@ -304,7 +332,8 @@ In the example above:
 1. **Run GC before capturing profile:**
 
    ```bash
-   curl http://localhost:<PORT>/debug/pprof/heap?gc=1 > heap.prof
+   curl -H "Authotization: your-secret-token" \
+     http://localhost:<PORT>/debug/pprof/heap?gc=1 > heap.prof
    ```
 
 2. **Test under realistic load** - use load that resembles production
@@ -322,26 +351,36 @@ In the example above:
 ## Quick Commands Reference
 
 ```bash
-# Heap memory profile
-go tool pprof http://localhost:<PORT>/debug/pprof/heap
+# Set authentication token
+export PPROF_TOKEN="your-secret-token"
+
+# Heap memory profile (fetch with auth, then analyze)
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/heap > heap.prof
+go tool pprof heap.prof
 
 # Goroutine profile
-go tool pprof http://localhost:<PORT>/debug/pprof/goroutine
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/goroutine > goroutine.prof
+go tool pprof goroutine.prof
 
 # Allocs (all allocations)
-go tool pprof http://localhost:<PORT>/debug/pprof/allocs
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/allocs > allocs.prof
+go tool pprof allocs.prof
 
 # Compare two profiles
 go tool pprof -base=before.prof after.prof
 
-# Web UI
+# Web UI (use pre-fetched profile)
 go tool pprof -http=:8080 heap.prof
 
 # Generate PNG
 go tool pprof -png heap.prof > output.png
 
-# Interactive with live server
-go tool pprof -http=:8080 http://localhost:<PORT>/debug/pprof/heap
+# Capture with GC first
+curl -H "Authotization: ${PPROF_TOKEN}" \
+  http://localhost:<PORT>/debug/pprof/heap?gc=1 > heap.prof
 ```
 
 ## Troubleshooting
