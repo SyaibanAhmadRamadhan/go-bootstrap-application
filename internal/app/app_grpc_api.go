@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"erp-directory-service/internal/config"
+	"erp-directory-service/internal/gen/grpcgen/healthcheck"
 	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
 	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
 	"erp-directory-service/internal/provider"
@@ -16,14 +18,20 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-type grpcApi struct {
-	server   *grpc.Server
-	port     int
-	listener net.Listener
-	closeFn  []func() error
+type grpcApiApp struct {
+	server    *grpc.Server
+	port      int
+	listener  net.Listener
+	closeFn   []func() error
+	debugMode bool
 }
 
-func NewGrpcApi(port int) *grpcApi {
+func NewGrpcApiApp(port int) *grpcApiApp {
+	appCfg := config.GetAppGrpcApi()
+	if port == 0 {
+		port = appCfg.Port
+	}
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("gagal listen: %v", err)
@@ -31,19 +39,20 @@ func NewGrpcApi(port int) *grpcApi {
 
 	s := grpc.NewServer()
 
-	grpcApi := &grpcApi{
-		port:     port,
-		listener: lis,
-		server:   s,
-		closeFn:  make([]func() error, 0),
+	grpcApp := &grpcApiApp{
+		port:      port,
+		listener:  lis,
+		server:    s,
+		closeFn:   make([]func() error, 0),
+		debugMode: appCfg.DebugMode,
 	}
 
-	grpcApi.init()
+	grpcApp.init()
 
-	return grpcApi
+	return grpcApp
 }
 
-func (r *grpcApi) Shutdown(ctx context.Context) error {
+func (r *grpcApiApp) Shutdown(ctx context.Context) error {
 	errs := make([]error, 0, len(r.closeFn))
 
 	r.server.GracefulStop()
@@ -65,15 +74,15 @@ func (r *grpcApi) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (r *grpcApi) Start() {
+func (r *grpcApiApp) Start() {
 	slog.Info(fmt.Sprintf("gRPC server running on :%d", r.port))
 	if err := r.server.Serve(r.listener); err != nil {
 		slog.Error(err.Error())
 	}
 }
 
-func (r *grpcApi) init() {
-	db, err := provider.NewDB()
+func (r *grpcApiApp) init() {
+	db, err := provider.NewDB(r.debugMode)
 	if err != nil {
 		panic(err)
 	}
@@ -82,10 +91,18 @@ func (r *grpcApi) init() {
 	healthcheckRepo := healthcheckrepository.NewRepository(db)
 	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
 
-	routerGrpc := routerGrpc{
+	routerGrpc := routerGrpcApi{
 		healthcheck: transporthealthcheck.NewTransportGrpc(healthcheckService),
 	}
 
 	routerGrpc.init(r.server)
 	reflection.Register(r.server)
+}
+
+type routerGrpcApi struct {
+	healthcheck *transporthealthcheck.TransportHealthCheckGrpc
+}
+
+func (i *routerGrpcApi) init(s *grpc.Server) {
+	healthcheck.RegisterHealthCheckServiceServer(s, i.healthcheck)
 }

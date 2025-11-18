@@ -9,23 +9,38 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/confy"
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/utils/graceful"
 	"github.com/spf13/cobra"
 )
 
 func newGrpcApiCmd() *cobra.Command {
-	preRunClosed := make([]func() error, 0, 1)
+	preRunClosed := make([]func() error, 0, 2)
 	var shutdownServer func(ctx context.Context) error
 
 	var port int
-	var slogHook string
-	var zerologHook string
+	var slogHookOption string
+	var zerologHookOption string
 
 	cmd := &cobra.Command{
 		Use:   "grpcapi",
 		Short: "Run the server",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			preRunClosed = append(preRunClosed, provider.NewLogging("grpcapi", slogHook, zerologHook))
+			appCfg := config.GetAppGrpcApi()
+
+			app.StartPprofServer(cmd.Name())
+			closeLogging := provider.NewLogging(
+				"grpcapi",
+				slogHookOption, zerologHookOption,
+				appCfg.DebugMode, appCfg.Env, appCfg.Name,
+			)
+
+			preRunClosed = append(preRunClosed, closeLogging)
+			preRunClosed = append(preRunClosed, config.UnwatchLoader)
+			preRunClosed = append(preRunClosed, func() error {
+				confy.Close()
+				return nil
+			})
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			graceful.Shutdown(func(ctx context.Context) error {
@@ -46,7 +61,7 @@ func newGrpcApiCmd() *cobra.Command {
 			}, 30*time.Second, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			grpcApi := app.NewGrpcApi(port)
+			grpcApi := app.NewGrpcApiApp(port)
 			shutdownServer = grpcApi.Shutdown
 			go func() {
 				grpcApi.Start()
@@ -54,12 +69,11 @@ func newGrpcApiCmd() *cobra.Command {
 		},
 	}
 
-	config.LoadConfig()
-	cmd.Flags().IntVarP(&port, "port", "p", config.GetApp().Port, "Port to run the server on")
-	cmd.Flags().StringVarP(&slogHook, "slog-hook", "s", "file-writer",
+	cmd.Flags().IntVarP(&port, "port", "p", 0, "Port to run the server on")
+	cmd.Flags().StringVarP(&slogHookOption, "slog-hook", "s", "file-writer",
 		"slog hook output: file-writer (write to file) or std-out (write to stdout). default: file-writer",
 	)
-	cmd.Flags().StringVarP(&zerologHook, "zerolog-hook", "z", "file-writer",
+	cmd.Flags().StringVarP(&zerologHookOption, "zerolog-hook", "z", "file-writer",
 		"zerolog hook output: file-writer (write to file) or std-out (write to stdout). default: file-writer",
 	)
 

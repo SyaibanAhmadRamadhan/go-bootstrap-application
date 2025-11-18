@@ -6,6 +6,9 @@ run-restapi:
 run-grpcapi:
 	cd cmd && go run . grpcapi -s std-out -z file-writer
 
+run-scheduler:
+	cd cmd && go run . scheduler -s std-out -z file-writer
+
 api_generate: api/openapi/api.yaml
 	npx openapi-format api/openapi/api.yaml -s api/openapi/openapi-sort.json -f api/openapi/openapi-filter.json -o api/openapi/api.yaml
 	mkdir -p internal/gen/restapigen

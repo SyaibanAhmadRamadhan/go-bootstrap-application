@@ -15,7 +15,7 @@ type DB struct {
 	sqlDB *sql.DB
 }
 
-func NewDB() (DB, error) {
+func NewDB(debugMode bool) (DB, error) {
 	cfg := config.GetDatabase()
 
 	db, err := sql.Open("mysql", cfg.DSN)
@@ -39,10 +39,8 @@ func NewDB() (DB, error) {
 		"conn_max_idle_time", cfg.ConnMaxIdleTime,
 	)
 
-	appCfg := config.GetApp()
-
 	rdbms := sqlx.NewRDBMS(db,
-		sqlx.UseDebug(appCfg.DebugMode),
+		sqlx.UseDebug(debugMode),
 	)
 
 	return DB{

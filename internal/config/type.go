@@ -3,15 +3,40 @@ package config
 import "time"
 
 type root struct {
-	App      App      `env:"app"`
-	Database Database `env:"database"`
+	AppRestApi   AppRestApi   `env:"app_rest_api"`
+	AppGrpcApi   AppGrpcApi   `env:"app_grpc_api"`
+	AppScheduler AppScheduler `env:"app_scheduler"`
+	Database     Database     `env:"database"`
 }
 
-type App struct {
+type AppRestApi struct {
 	Name      string `env:"name"`
-	Port      int    `env:"port"`
 	Env       string `env:"env"`
 	DebugMode bool   `env:"debug_mode"`
+	Port      int    `env:"port"`
+	Pprof     Pprof  `env:"pprof"`
+}
+
+type AppGrpcApi struct {
+	Name      string `env:"name"`
+	Env       string `env:"env"`
+	DebugMode bool   `env:"debug_mode"`
+	Port      int    `env:"port"`
+	Pprof     Pprof  `env:"pprof"`
+}
+
+type AppScheduler struct {
+	Name                string `env:"name"`
+	Env                 string `env:"env"`
+	DebugMode           bool   `env:"debug_mode"`
+	HealthCheckInterval string `env:"healthcheck_interval"`
+	Pprof               Pprof  `env:"pprof"`
+}
+
+type Pprof struct {
+	Enable      bool   `env:"enable"`
+	Port        int    `env:"port"`
+	StaticToken string `env:"static_token"`
 }
 
 type Database struct {

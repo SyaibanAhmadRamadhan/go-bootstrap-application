@@ -17,13 +17,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type restapi struct {
-	server  *http.Server
-	port    int
-	closeFn []func() error
+type restApiApp struct {
+	server    *http.Server
+	port      int
+	closeFn   []func() error
+	debugMode bool
 }
 
-func NewRestApi(port int) *restapi {
+func NewRestApiApp(port int) *restApiApp {
+	appCfg := config.GetAppRestApi()
+	if port == 0 {
+		port = appCfg.Port
+	}
+
 	handler := chix.New(chix.Config{
 		BlacklistRouteLogResponse: map[string]struct{}{},
 		SensitiveFields:           map[string]struct{}{},
@@ -33,24 +39,25 @@ func NewRestApi(port int) *restapi {
 			AllowHeaders:     nil,
 			AllowCredentials: true,
 		},
-		AppName: config.GetApp().Name,
+		AppName: appCfg.Name,
 		UseOtel: false,
 	})
 
-	restApi := &restapi{
-		port:    port,
-		closeFn: make([]func() error, 0),
+	restapiApp := &restApiApp{
+		port:      port,
+		closeFn:   make([]func() error, 0),
+		debugMode: appCfg.DebugMode,
 	}
 
-	restApi.server = &http.Server{
+	restapiApp.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: restapigen.HandlerFromMux(restApi.init(handler), handler),
+		Handler: restapigen.HandlerFromMux(restapiApp.init(handler), handler),
 	}
 
-	return restApi
+	return restapiApp
 }
 
-func (r *restapi) Shutdown(ctx context.Context) error {
+func (r *restApiApp) ShutdownAndClose(ctx context.Context) error {
 	errs := make([]error, 0, len(r.closeFn))
 
 	err := r.server.Shutdown(ctx)
@@ -71,7 +78,7 @@ func (r *restapi) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (r *restapi) Start() {
+func (r *restApiApp) Start() {
 	slog.Info(fmt.Sprintf("REST API listening on %s", r.server.Addr))
 	err := r.server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -79,8 +86,8 @@ func (r *restapi) Start() {
 	}
 }
 
-func (r *restapi) init(c *chi.Mux) routerRestApi {
-	db, err := provider.NewDB()
+func (r *restApiApp) init(c *chi.Mux) routerRestApi {
+	db, err := provider.NewDB(r.debugMode)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +100,12 @@ func (r *restapi) init(c *chi.Mux) routerRestApi {
 		handler:                     c,
 		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
 	}
-	router.init()
 
 	return router
+}
+
+type routerRestApi struct {
+	handler *chi.Mux
+	// restapigen.Unimplemented
+	*transporthealthcheck.TransportHealthCheckRestApi
 }

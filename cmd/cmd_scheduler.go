@@ -14,23 +14,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newRestApiCmd() *cobra.Command {
-	preRunClosed := make([]func() error, 0, 1)
-	var shutdownServer func(ctx context.Context) error
+func newCmdScheduler() *cobra.Command {
+	preRunClosed := make([]func() error, 0, 2)
+	var shutdownScheduler func(ctx context.Context) error
 
-	var port int
 	var slogHookOption string
 	var zerologHookOption string
 
 	cmd := &cobra.Command{
-		Use:   "restapi",
-		Short: "Run the server",
+		Use:   "scheduler",
+		Short: "Run the scheduler",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			appCfg := config.GetAppRestApi()
+			appCfg := config.GetAppScheduler()
 
 			app.StartPprofServer(cmd.Name())
 			closeLogging := provider.NewLogging(
-				"restapi",
+				"scheduler",
 				slogHookOption, zerologHookOption,
 				appCfg.DebugMode, appCfg.Env, appCfg.Name,
 			)
@@ -46,7 +45,7 @@ func newRestApiCmd() *cobra.Command {
 			graceful.Shutdown(func(ctx context.Context) error {
 				errs := make([]error, 0)
 
-				err := shutdownServer(ctx)
+				err := shutdownScheduler(ctx)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -61,15 +60,12 @@ func newRestApiCmd() *cobra.Command {
 			}, 30*time.Second, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			restApi := app.NewRestApiApp(port)
-			shutdownServer = restApi.ShutdownAndClose
-			go func() {
-				restApi.Start()
-			}()
+			scheduler := app.NewSchedulerApp()
+			shutdownScheduler = scheduler.Shutdown
+			scheduler.Start()
 		},
 	}
 
-	cmd.Flags().IntVarP(&port, "port", "p", 0, "Port to run the server on")
 	cmd.Flags().StringVarP(&slogHookOption, "slog-hook", "s", "file-writer",
 		"slog hook output: file-writer (write to file) or std-out (write to stdout). default: file-writer",
 	)

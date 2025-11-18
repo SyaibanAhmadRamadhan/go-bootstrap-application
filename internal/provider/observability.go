@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"erp-directory-service/internal/config"
 	"fmt"
 	"io"
 	"os"
@@ -13,8 +12,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewLogging(filename, slogHookOption, zerologHookOption string) func() error {
-	appConfig := config.GetApp()
+func NewLogging(filename, slogHookOption, zerologHookOption string, debugMode bool, env string, serviceName string) func() error {
 	closeFn := make([]func(), 0, 2)
 
 	var slogHook io.Writer
@@ -45,9 +43,9 @@ func NewLogging(filename, slogHookOption, zerologHookOption string) func() error
 		ZerologHook: zerologHook,
 		SlogHook:    slogHook,
 		Mode:        "json",
-		Level:       generic.Ternary(appConfig.Env == "development", "debug", "info"),
-		Env:         appConfig.Env,
-		ServiceName: appConfig.Name,
+		Level:       generic.Ternary(env == "development", "debug", "info"),
+		Env:         env,
+		ServiceName: serviceName,
 	})
 	observability.Start(context.Background(), zerolog.InfoLevel).Msg("init logging successfully")
 

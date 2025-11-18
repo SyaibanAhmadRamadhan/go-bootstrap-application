@@ -15,10 +15,16 @@ It's designed for a "distributed monolith" style architecture: many services, on
     - [Running the Application](#running-the-application)
     - [Code Generation](#code-generation)
     - [Utilities](#utilities)
+  - [Configuration](#configuration)
+    - [Configuration Structure](#configuration-structure)
+    - [Application Configs](#application-configs)
+    - [Pprof Configuration (Realtime Hot-Reload)](#pprof-configuration-realtime-hot-reload)
+    - [How Configuration Works Internally](#how-configuration-works-internally)
   - [Project Structure](#project-structure)
     - [Domain Layer (`internal/domain/`)](#domain-layer-internaldomain)
     - [Module Layer (`internal/module/`)](#module-layer-internalmodule)
     - [Transport Layer (`internal/transport/`)](#transport-layer-internaltransport)
+    - [Worker Layer (`internal/worker/`)](#worker-layer-internalworker)
     - [Other Important Directories](#other-important-directories)
   - [Architecture Flow](#architecture-flow)
   - [Development Workflow](#development-workflow)
@@ -29,6 +35,7 @@ It's designed for a "distributed monolith" style architecture: many services, on
     - [Struct Names](#struct-names)
     - [File Names](#file-names)
     - [Transport Layer Naming](#transport-layer-naming)
+    - [Worker Layer Naming](#worker-layer-naming)
     - [Method Names](#method-names)
     - [Constants and Enums](#constants-and-enums)
     - [Function Parameters and Return Values](#function-parameters-and-return-values)
@@ -82,6 +89,185 @@ The project includes a `Makefile` with several useful commands:
 
 - `make preview_open_api` - Preview OpenAPI documentation in browser using Redocly
 - `make clean` - Clean generated files, builds, and artifacts
+
+## Configuration
+
+### Configuration Structure
+
+The application uses JSON-based configuration files (`env.json`) that can be hot-reloaded during development. The configuration is separated by application type for better modularity and independence.
+
+**Config file location:** `env.json` (create from `env.example.json`)
+
+**Important:** After cloning the repository, run `make generate` to generate all required code before starting the application.
+
+### Application Configs
+
+Each application (HTTP API, gRPC API, Scheduler) has its own independent configuration:
+
+**`app_rest_api` - REST API Configuration:**
+
+```json
+{
+    "app_rest_api": {
+        "name": "directory-service-http",    // Service name for logging/tracing
+        "env": "development",                 // Environment: development/staging/production
+        "debug_mode": true,                   // Enable debug logging and SQL query logging
+        "port": 8080                          // HTTP server port
+    }
+}
+```
+
+**`app_grpc_api` - gRPC API Configuration:**
+
+```json
+{
+    "app_grpc_api": {
+        "name": "directory-service-grpc",    // Service name for logging/tracing
+        "env": "development",                 // Environment: development/staging/production
+        "debug_mode": true,                   // Enable debug logging and SQL query logging
+        "port": 9090                          // gRPC server port
+    }
+}
+```
+
+**`app_scheduler` - Background Jobs Configuration:**
+
+```json
+{
+    "app_scheduler": {
+        "name": "directory-service-scheduler",     // Service name for logging/tracing
+        "env": "development",                       // Environment: development/staging/production
+        "debug_mode": true,                         // Enable debug logging
+        "healthcheck_interval": "0 */5 * * * *"    // Cron expression (every 5 minutes)
+    }
+}
+```
+
+**Why Separate Configs?**
+
+- Each service can have different names for logging/monitoring
+- Independent debug modes per service
+- Different environment settings (e.g., HTTP in production, gRPC in staging)
+- Better multi-service architecture support
+
+**`database` - Database Configuration:**
+
+```json
+{
+    "database": {
+        "dsn": "user:password@tcp(host:port)/dbname?parseTime=true",
+        "max_open_conns": 25,        // Maximum open connections
+        "max_idle_conns": 25,        // Maximum idle connections
+        "conn_max_lifetime": "300s", // Connection max lifetime
+        "conn_max_idle_time": "60s"  // Connection max idle time
+    }
+}
+```
+
+### Pprof Configuration (Realtime Hot-Reload)
+
+Pprof is used for performance profiling and memory leak detection. It supports **realtime hot-reload** without restarting the application.
+
+```json
+{
+    "pprof": {
+        "enable": true,                           // Enable/disable pprof server
+        "port": 7070,                             // Pprof HTTP server port
+        "static_token": "your-secret-token"       // Static token for authentication
+    }
+}
+```
+
+**Hot-Reload Behavior:**
+
+The pprof server monitors configuration changes and automatically starts/stops based on the `enable` flag:
+
+1. **Enable pprof:**
+   - Set `"enable": true` in `env.json`
+   - Server starts automatically on the configured port
+   - No application restart required
+
+2. **Disable pprof:**
+   - Set `"enable": false` in `env.json`
+   - Server stops gracefully
+   - No application restart required
+
+3. **Change pprof port:**
+   - **Step 1:** Set `"enable": false` (stops current server)
+   - **Step 2:** Change `"port": 8080` to desired port
+   - **Step 3:** Set `"enable": true` (starts server on new port)
+
+   **Important:** The restart trigger is based on changes to the `enable` flag. Direct port changes without toggling `enable` will not take effect.
+
+**Accessing Pprof Endpoints:**
+
+```bash
+# Heap profile
+curl http://localhost:7070/debug/pprof/heap
+
+# Goroutine profile
+curl http://localhost:7070/debug/pprof/goroutine
+
+# All profiles
+open http://localhost:7070/debug/pprof/
+```
+
+**Security Note:** In production, always use a strong `static_token` and restrict access to pprof endpoints via network policies or authentication middleware.
+
+### How Configuration Works Internally
+
+**For beginners:** Understanding how configuration flows through the application:
+
+1. **Configuration Files (`env.json`):**
+   - Contains all application settings
+   - Watched for changes during development
+   - Automatically reloaded when modified
+
+2. **Config Loading (`internal/config/load_config.go`):**
+
+   ```go
+   config.LoadConfig()           // Initialize config loader
+   appCfg := config.GetAppRestApi()  // Get REST API config
+   ```
+
+3. **Config Types (`internal/config/type.go`):**
+   - Defines struct types for all configurations
+   - Uses struct tags for JSON mapping: `env:"field_name"`
+
+4. **Usage in Application:**
+
+   ```go
+   // In cmd layer - Application startup
+   appCfg := config.GetAppRestApi()
+   provider.NewLogging(filename, slogHook, zerologHook, 
+                       appCfg.DebugMode, appCfg.Env, appCfg.Name)
+   
+   // In app layer - Feature initialization
+   appCfg := config.GetAppRestApi()
+   db := provider.NewDB(appCfg.DebugMode)
+   ```
+
+**Configuration Flow:**
+
+```sh
+env.json → LoadConfig() → root struct → Getter functions → Application
+```
+
+**Getter Functions:**
+
+- `config.GetAppRestApi()` - Get REST API config
+- `config.GetAppGrpcApi()` - Get gRPC API config
+- `config.GetAppScheduler()` - Get Scheduler config
+- `config.GetDatabase()` - Get database config
+- `config.GetPprof()` - Get pprof config
+
+**Why This Design?**
+
+- **Separation of Concerns:** Config loading separated from business logic
+- **Type Safety:** Strongly typed configuration access
+- **Hot-Reload:** Changes detected automatically in development
+- **Testability:** Easy to mock config in tests
+- **Independence:** Each app can use different configs
 
 ## Project Structure
 
@@ -274,15 +460,168 @@ func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
 - Perform data validation (domain layer responsibility)
 - Make decisions based on business rules
 
+### Worker Layer (`internal/worker/`)
+
+The worker layer is responsible for **all background processing tasks**. This includes scheduled jobs (cron), message broker consumers (Kafka, RabbitMQ), and any asynchronous processing that runs independently of HTTP/gRPC requests.
+
+```text
+internal/worker/<feature>/
+├── cron_<feature>.go       # Scheduled jobs (cron)
+├── consumer_<feature>.go   # Message broker consumers (future)
+└── job_<feature>.go        # Other background jobs (future)
+```
+
+**What Goes in Worker Layer:**
+
+1. **Scheduled Jobs (Cron)** - Time-triggered tasks
+   - Health checks
+   - Data cleanup
+   - Report generation
+   - Scheduled notifications
+
+2. **Message Consumers (Future)** - Event-driven tasks
+   - Kafka consumers
+   - RabbitMQ consumers
+   - Redis pub/sub subscribers
+   - Event processing
+
+3. **Background Jobs** - Async processing
+   - Email sending
+   - File processing
+   - Data synchronization
+   - Batch operations
+
+**Key principles:**
+
+- Handles all background processing (scheduled, event-driven, async)
+- No business logic - only triggering and calling services
+- Each worker depends on domain service interfaces
+- Thin layer that delegates to the domain/module layer
+- Independent from HTTP/gRPC layers
+
+**Scheduler (Cron) Example:**
+
+```go
+package workerhealthcheck
+
+import (
+    "context"
+    "log"
+    "time"
+    domainhealthcheck "project/internal/domain/healthcheck"
+)
+
+type WorkerHealthCheck struct {
+    healthcheckService domainhealthcheck.HealthCheckService
+}
+
+func NewWorker(
+    healthcheckService domainhealthcheck.HealthCheckService,
+) *WorkerHealthCheck {
+    return &WorkerHealthCheck{
+        healthcheckService: healthcheckService,
+    }
+}
+
+// CronCheckDependencies runs periodic health checks
+// Cron schedule: "*/5 * * * *" (every 5 minutes)
+func (w *WorkerHealthCheck) CronCheckDependencies() {
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    log.Println("[CRON] Starting health check...")
+
+    // Call domain service
+    output := w.healthcheckService.CheckDependencies(ctx)
+
+    // Log results or send alerts
+    if output.Status != domainhealthcheck.StatusHealthCheckOk {
+        log.Printf("[CRON] Health check failed: %s", output.Status)
+        // Send alert to monitoring system
+    } else {
+        log.Println("[CRON] Health check passed")
+    }
+}
+
+// CronCleanupOldData runs periodic data cleanup
+// Cron schedule: "0 2 * * *" (daily at 2 AM)
+func (w *WorkerHealthCheck) CronCleanupOldData() {
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+    defer cancel()
+
+    log.Println("[CRON] Starting cleanup job...")
+
+    // Call domain service for cleanup
+    // err := w.cleanupService.CleanupOldData(ctx)
+    
+    log.Println("[CRON] Cleanup job completed")
+}
+```
+
+**Registering Cron Jobs (using robfig/cron):**
+
+```go
+package app
+
+import (
+    "github.com/robfig/cron/v3"
+    workerhealthcheck "project/internal/worker/healthcheck"
+)
+
+func InitCronJobs(
+    healthcheckWorker *workerhealthcheck.WorkerHealthCheck,
+) *cron.Cron {
+    c := cron.New()
+
+    // Every 5 minutes
+    c.AddFunc("*/5 * * * *", healthcheckWorker.CronCheckDependencies)
+
+    // Daily at 2 AM
+    c.AddFunc("0 2 * * *", healthcheckWorker.CronCleanupOldData)
+
+    return c
+}
+```
+
+**Worker Responsibilities:**
+
+- **Schedule Management** - Register and manage cron schedules
+- **Event Processing** - Consume and process messages from brokers
+- **Context Creation** - Create proper context with timeouts for jobs
+- **Error Handling** - Handle errors and send alerts if jobs fail
+- **Logging** - Log job execution for monitoring
+- **Service Delegation** - Call domain services to perform actual work
+
+**Worker Does NOT:**
+
+- Contain business logic
+- Directly access databases or external services
+- Make decisions based on business rules
+- Handle HTTP requests or gRPC calls (use Transport layer for that)
+
+**Worker vs Transport Layer:**
+
+| Aspect | Worker Layer | Transport Layer |
+|--------|-------------|-----------------|
+| **Trigger** | Time schedule, events, async | HTTP/gRPC requests |
+| **Entry Point** | Cron, message broker, background | API endpoint |
+| **Response** | No response (fire and forget) | Synchronous response required |
+| **Use Cases** | Scheduled jobs, event processing | API requests, real-time operations |
+| **Examples** | Daily cleanup, Kafka consumer | GET /users, gRPC GetUser |
+
 ### Other Important Directories
 
 - `api/` - API specifications (OpenAPI YAML, Protocol Buffers)
 - `cmd/` - Application entry points and CLI commands
 - `internal/app/` - Application initialization (gRPC, REST API, routing)
 - `internal/config/` - Configuration loading and types
-- `internal/gen/` - Auto-generated code (gRPC, REST API, mocks)
+- `internal/gen/` - Auto-generated code (excluded from git, must run `make generate` after cloning)
+  - `grpcgen/` - Generated gRPC server stubs and protocol buffer types from `.proto` files in `api/proto`
+  - `restapigen/` - Generated REST API server handlers and types from OpenAPI in files`api/openapi/api.yaml` specification
+  - `mockgen/` - Generated mock implementations of domain interfaces for testing
 - `internal/provider/` - Infrastructure providers (database, observability)
 - `internal/transport/` - Transport layer handlers (gRPC, REST API)
+- `internal/worker/` - Background job handlers (cron jobs, scheduled tasks)
 
 ## Architecture Flow
 
@@ -290,7 +629,9 @@ func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
 2. **Code Generation** → Creates server stubs and types
 3. **Domain Layer** → Defines business interfaces
 4. **Module Layer** → Implements business logic
-5. **Transport Layer** → Handles HTTP/gRPC requests
+5. **Entry Points** → Handles requests via:
+   - Transport Layer (HTTP/gRPC)
+   - Worker Layer (Cron jobs)
 6. **Application Layer** → Wires everything together
 
 ## Development Workflow
@@ -298,7 +639,9 @@ func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
 1. Define your API contract in `api/openapi/api.yaml` or `api/proto/`
 2. Create domain interfaces in `internal/domain/<feature>/`
 3. Implement business logic in `internal/module/<feature>/`
-4. Create transport handlers in `internal/transport/<feature>/`
+4. Create entry point handlers:
+   - Transport handlers in `internal/transport/<feature>/` for HTTP/gRPC
+   - Worker handlers in `internal/worker/<feature>/` for cron jobs
 5. Run `make generate` to generate code
 6. Wire dependencies in `internal/app/`
 7. Run the application with `make run-restapi` or `make run-grpcapi`
@@ -351,6 +694,13 @@ Package: package transporthealthcheck
 
 Folder:  internal/transport/user/
 Package: package transportuser
+
+# Worker Layer
+Folder:  internal/worker/healthcheck/
+Package: package workerhealthcheck
+
+Folder:  internal/worker/user/
+Package: package workeruser
 ```
 
 ### Package Names Rules
@@ -360,13 +710,15 @@ Package: package transportuser
 - For service packages, use feature + `service`: `healthcheckservice`, `userservice`
 - For repository packages, use feature + `repository`: `healthcheckrepository`, `userrepository`
 - For transport packages, prefix with `transport`: `transporthealthcheck`, `transportuser`
+- For worker packages, prefix with `worker`: `workerhealthcheck`, `workeruser`
 
 **Example:**
 
 ```go
-package domainhealthcheck  // domain layer
-package healthcheckservice // module service implementation
+package domainhealthcheck    // domain layer
+package healthcheckservice   // module service implementation
 package transporthealthcheck // transport layer
+package workerhealthcheck    // worker layer
 ```
 
 ### Interface Names
@@ -472,6 +824,9 @@ service_<feature>_test.go      # e.g., service_healthcheck_test.go
 // Transport layer
 grpc_<feature>.go              # e.g., grpc_healthcheck.go
 restapi_<feature>.go           # e.g., restapi_healthcheck.go
+
+// Worker layer
+cron_<feature>.go              # e.g., cron_healthcheck.go
 ```
 
 ### Transport Layer Naming
@@ -578,6 +933,70 @@ internal/transport/healthcheck/
 internal/transport/user/
 ├── grpc_user.go             # Contains: TransportUserGrpc
 └── restapi_user.go          # Contains: TransportUserRestApi
+```
+
+### Worker Layer Naming
+
+**Package Name:**
+
+```go
+package workerhealthcheck  // prefix 'worker' + feature name
+package workeruser
+package workerproduct
+```
+
+**Struct Names:**
+
+Use descriptive names with `Worker` prefix:
+
+```go
+type WorkerHealthCheck struct {
+    healthcheckService domainhealthcheck.HealthCheckService
+}
+
+type WorkerUser struct {
+    userService domainuser.UserService
+}
+```
+
+**Constructor Names:**
+
+```go
+func NewWorker(
+    healthcheckService domainhealthcheck.HealthCheckService,
+) *WorkerHealthCheck {
+    return &WorkerHealthCheck{
+        healthcheckService: healthcheckService,
+    }
+}
+```
+
+**Method Names:**
+
+Methods should use `Cron` prefix to indicate scheduled jobs:
+
+```go
+func (w *WorkerHealthCheck) CronCheckDependencies() {
+    // Implementation
+}
+
+func (w *WorkerUser) CronSendDailyReport() {
+    // Implementation
+}
+
+func (w *WorkerUser) CronCleanupInactiveUsers() {
+    // Implementation
+}
+```
+
+**File Organization:**
+
+```text
+internal/worker/healthcheck/
+└── cron_healthcheck.go      # Contains: WorkerHealthCheck
+
+internal/worker/user/
+└── cron_user.go             # Contains: WorkerUser
 ```
 
 ### Method Names
