@@ -1,1137 +1,238 @@
 # GO SERVICE BOOTSTRAP
 
-A starter template for building internal backend services.  
+A starter template for building internal backend services with Go.  
 This repository provides a ready-to-use project layout, wiring, and tooling so you don't have to set up everything from scratch for every new service.
 
-It's designed for a "distributed monolith" style architecture: many services, one database, with clear ownership and strict API contracts between services.
+Designed for a "distributed monolith" architecture: many services, one database, with clear ownership and strict API contracts between services.
 
-## Table of Contents
+## Quick Start
 
-- [GO SERVICE BOOTSTRAP](#go-service-bootstrap)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Makefile Commands](#makefile-commands)
-    - [Running the Application](#running-the-application)
-    - [Code Generation](#code-generation)
-    - [Utilities](#utilities)
-  - [Configuration](#configuration)
-    - [Configuration Structure](#configuration-structure)
-    - [Application Configs](#application-configs)
-    - [Pprof Configuration (Realtime Hot-Reload)](#pprof-configuration-realtime-hot-reload)
-    - [How Configuration Works Internally](#how-configuration-works-internally)
-  - [Project Structure](#project-structure)
-    - [Domain Layer (`internal/domain/`)](#domain-layer-internaldomain)
-    - [Module Layer (`internal/module/`)](#module-layer-internalmodule)
-    - [Transport Layer (`internal/transport/`)](#transport-layer-internaltransport)
-    - [Worker Layer (`internal/worker/`)](#worker-layer-internalworker)
-    - [Other Important Directories](#other-important-directories)
-  - [Architecture Flow](#architecture-flow)
-  - [Development Workflow](#development-workflow)
-  - [Naming Conventions](#naming-conventions)
-    - [Folder vs Package Names](#folder-vs-package-names)
-    - [Package Names Rules](#package-names-rules)
-    - [Interface Names](#interface-names)
-    - [Struct Names](#struct-names)
-    - [File Names](#file-names)
-    - [Transport Layer Naming](#transport-layer-naming)
-    - [Worker Layer Naming](#worker-layer-naming)
-    - [Method Names](#method-names)
-    - [Constants and Enums](#constants-and-enums)
-    - [Function Parameters and Return Values](#function-parameters-and-return-values)
-    - [Constructor Functions](#constructor-functions)
-  - [Testing](#testing)
-  - [Performance \& Debugging](#performance--debugging)
-    - [Memory Leak Detection](#memory-leak-detection)
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+
+# 2. Install dependencies
+bash scripts/install_dependency.sh
+
+# 3. Create configuration
+cp env.example.json env.json
+
+# 4. Generate code
+make generate
+
+# 5. Run the application
+make run-restapi    # REST API server
+make run-grpcapi    # gRPC API server
+make run-scheduler  # Background scheduler
+```
 
 ## Prerequisites
-
-Before you start, make sure you have the following installed:
 
 - Go 1.24 or higher
 - Node.js and npm (for OpenAPI tooling)
 - Make
 
-## Installation
+## Documentation
 
-Run the installation script to install all required dependencies:
-
-```bash
-bash scripts/install_dependency.sh
-```
-
-This script will install:
-
-- **buf** - Protocol buffer management tool
-- **oapi-codegen** - OpenAPI code generator for Go
-- **mockgen** - Mock generator for Go interfaces
-- **gosec** - Go security checker
-- **openapi-format** - OpenAPI formatter and validator
-- **@redocly/cli** - OpenAPI documentation preview tool
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Configuration structure, pprof hot-reload, and settings
+- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Architecture layers and directory organization
+- **[Naming Conventions](docs/NAMING_CONVENTIONS.md)** - Package, file, and code naming standards
+- **[Transport Examples](docs/TRANSPORT_EXAMPLES.md)** - gRPC and REST API handler examples
+- **[Worker Examples](docs/WORKER_EXAMPLES.md)** - Scheduler and cron job implementation guides
+- **[Memory Leak Detection](docs/MEMORY_LEAK_DETECTION.md)** - Performance profiling and debugging
 
 ## Makefile Commands
 
-The project includes a `Makefile` with several useful commands:
-
 ### Running the Application
 
-- `make run-restapi` - Start the REST API server with stdout logging and file writer
-- `make run-grpcapi` - Start the gRPC API server with stdout logging and file writer
+```bash
+make run-restapi    # Start REST API server (port 8080)
+make run-grpcapi    # Start gRPC API server (port 9090)
+make run-scheduler  # Start background scheduler
+```
 
 ### Code Generation
 
-- `make generate` - Run all code generation (API, gRPC, and mocks)
-- `make api_generate` - Generate REST API server and types from OpenAPI spec
-- `make buf_generate` - Generate gRPC code from Protocol Buffers
-- `make go_generate` - Run Go's built-in code generation (e.g., mockgen)
+```bash
+make generate       # Run all code generation (API, gRPC, mocks)
+make api_generate   # Generate REST API server from OpenAPI spec
+make buf_generate   # Generate gRPC code from protobuf
+make go_generate    # Generate mocks with mockgen
+```
 
 ### Utilities
 
-- `make preview_open_api` - Preview OpenAPI documentation in browser using Redocly
-- `make clean` - Clean generated files, builds, and artifacts
+```bash
+make preview_open_api  # Preview OpenAPI docs in browser
+make clean             # Clean generated files and artifacts
+```
+
+## Project Structure
+
+```text
+├── api/                    # API specifications (OpenAPI, protobuf)
+├── cmd/                    # Application entry points
+├── docs/                   # Documentation
+├── internal/
+│   ├── app/               # Application initialization
+│   ├── config/            # Configuration management
+│   ├── domain/            # Business interfaces & DTOs (clean architecture)
+│   ├── gen/               # Auto-generated code (gitignored)
+│   │   ├── grpcgen/      # Generated gRPC stubs
+│   │   ├── mockgen/      # Generated mocks
+│   │   └── restapigen/   # Generated REST API handlers
+│   ├── module/            # Business logic implementation
+│   │   ├── <feature>/repository/  # Data access layer
+│   │   └── <feature>/service/     # Business logic layer
+│   ├── provider/          # Infrastructure providers (DB, logging)
+│   ├── transport/         # HTTP/gRPC handlers
+│   └── worker/            # Background jobs & schedulers
+├── scripts/               # Build & deployment scripts
+└── makefile              # Build automation
+```
+
+## Architecture Overview
+
+This project follows clean architecture principles with clear separation of concerns:
+
+```text
+┌─────────────────────────────────────────────────────┐
+│                   Entry Points                       │
+│  (REST API, gRPC API, Scheduler, CLI Commands)      │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│              Transport & Worker Layers               │
+│  • Transport: HTTP/gRPC handlers                     │
+│  • Worker: Cron jobs, message consumers             │
+│  (Protocol-specific, thin delegation layer)         │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│                   Domain Layer                       │
+│  • Interfaces (Service, Repository)                 │
+│  • DTOs (Input/Output)                              │
+│  • Value Objects & Enums                            │
+│  (Framework-agnostic, pure Go)                      │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│                   Module Layer                       │
+│  • Service Implementation (business logic)          │
+│  • Repository Implementation (data access)          │
+│  (Concrete implementations of domain interfaces)    │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│                  Infrastructure                      │
+│  (Database, External APIs, File System, etc.)       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Layer Responsibilities
+
+| Layer | Purpose | Examples |
+|-------|---------|----------|
+| **Transport** | Protocol handlers (HTTP/gRPC) | REST endpoints, gRPC services |
+| **Worker** | Background processing | Cron jobs, Kafka consumers |
+| **Domain** | Business interfaces & DTOs | Service interfaces, Input/Output DTOs |
+| **Module** | Business logic implementation | Service & repository implementations |
+| **Provider** | Infrastructure setup | Database connections, logging |
+
+## Development Workflow
+
+1. **Define API Contract** - Create OpenAPI spec (`api/openapi/`) or protobuf (`api/proto/`)
+2. **Generate Code** - Run `make generate` to create server stubs and types
+3. **Define Domain** - Create interfaces in `internal/domain/<feature>/`
+4. **Implement Business Logic** - Write implementations in `internal/module/<feature>/`
+5. **Create Handlers** - Add transport handlers (`internal/transport/`) or workers (`internal/worker/`)
+6. **Wire Dependencies** - Configure in `internal/app/`
+7. **Run & Test** - Use `make run-restapi` or `make run-grpcapi`
 
 ## Configuration
 
-### Configuration Structure
+Configuration is JSON-based (`env.json`) with hot-reload support during development.
 
-The application uses JSON-based configuration files (`env.json`) that can be hot-reloaded during development. The configuration is separated by application type for better modularity and independence.
-
-**Config file location:** `env.json` (create from `env.example.json`)
-
-**Important:** After cloning the repository, run `make generate` to generate all required code before starting the application.
-
-### Application Configs
-
-Each application (HTTP API, gRPC API, Scheduler) has its own independent configuration:
-
-**`app_rest_api` - REST API Configuration:**
+### Example Configuration
 
 ```json
 {
     "app_rest_api": {
-        "name": "directory-service-http",    // Service name for logging/tracing
-        "env": "development",                 // Environment: development/staging/production
-        "debug_mode": true,                   // Enable debug logging and SQL query logging
-        "port": 8080                          // HTTP server port
-    }
-}
-```
-
-**`app_grpc_api` - gRPC API Configuration:**
-
-```json
-{
+        "name": "my-service-rest-api",
+        "env": "development",
+        "debug_mode": true,
+        "port": 8080,
+        "pprof": {
+            "enable": true,
+            "port": 8080,
+            "static_token": "secret-token"
+        }
+    },
     "app_grpc_api": {
-        "name": "directory-service-grpc",    // Service name for logging/tracing
-        "env": "development",                 // Environment: development/staging/production
-        "debug_mode": true,                   // Enable debug logging and SQL query logging
-        "port": 9090                          // gRPC server port
-    }
-}
-```
-
-**`app_scheduler` - Background Jobs Configuration:**
-
-```json
-{
+        "name": "my-service-grpc-api",
+        "env": "development",
+        "debug_mode": true,
+        "port": 9090,
+        "pprof": {
+            "enable": false,
+            "port": 7070,
+            "static_token": "secret-token"
+        }
+    },
     "app_scheduler": {
-        "name": "directory-service-scheduler",     // Service name for logging/tracing
-        "env": "development",                       // Environment: development/staging/production
-        "debug_mode": true,                         // Enable debug logging
-        "healthcheck_interval": "0 */5 * * * *"    // Cron expression (every 5 minutes)
-    }
-}
-```
-
-**Why Separate Configs?**
-
-- Each service can have different names for logging/monitoring
-- Independent debug modes per service
-- Different environment settings (e.g., HTTP in production, gRPC in staging)
-- Better multi-service architecture support
-
-**`database` - Database Configuration:**
-
-```json
-{
+        "name": "my-service-scheduler",
+        "env": "development",
+        "debug_mode": true,
+        "healthcheck_interval": "0 */5 * * * *",
+        "pprof": {
+            "enable": true,
+            "port": 6060,
+            "static_token": "secret-token"
+        }
+    },
     "database": {
         "dsn": "user:password@tcp(host:port)/dbname?parseTime=true",
-        "max_open_conns": 25,        // Maximum open connections
-        "max_idle_conns": 25,        // Maximum idle connections
-        "conn_max_lifetime": "300s", // Connection max lifetime
-        "conn_max_idle_time": "60s"  // Connection max idle time
+        "max_open_conns": 25,
+        "max_idle_conns": 25,
+        "conn_max_lifetime": "300s",
+        "conn_max_idle_time": "60s"
     }
 }
 ```
 
-### Pprof Configuration (Realtime Hot-Reload)
+**Key Features:**
 
-Pprof is used for performance profiling and memory leak detection. It supports **realtime hot-reload** without restarting the application.
+- **Independent configs per service** - REST API, gRPC API, and Scheduler have separate configs
+- **Hot-reload** - Changes automatically reloaded during development
+- **Nested pprof** - Each service has its own profiling configuration
+- **Type-safe** - Strongly typed configuration structs
 
-```json
-{
-    "pprof": {
-        "enable": true,                           // Enable/disable pprof server
-        "port": 7070,                             // Pprof HTTP server port
-        "static_token": "your-secret-token"       // Static token for authentication
-    }
-}
-```
-
-**Hot-Reload Behavior:**
-
-The pprof server monitors configuration changes and automatically starts/stops based on the `enable` flag:
-
-1. **Enable pprof:**
-   - Set `"enable": true` in `env.json`
-   - Server starts automatically on the configured port
-   - No application restart required
-
-2. **Disable pprof:**
-   - Set `"enable": false` in `env.json`
-   - Server stops gracefully
-   - No application restart required
-
-3. **Change pprof port:**
-   - **Step 1:** Set `"enable": false` (stops current server)
-   - **Step 2:** Change `"port": 8080` to desired port
-   - **Step 3:** Set `"enable": true` (starts server on new port)
-
-   **Important:** The restart trigger is based on changes to the `enable` flag. Direct port changes without toggling `enable` will not take effect.
-
-**Accessing Pprof Endpoints:**
-
-```bash
-# Heap profile
-curl http://localhost:7070/debug/pprof/heap
-
-# Goroutine profile
-curl http://localhost:7070/debug/pprof/goroutine
-
-# All profiles
-open http://localhost:7070/debug/pprof/
-```
-
-**Security Note:** In production, always use a strong `static_token` and restrict access to pprof endpoints via network policies or authentication middleware.
-
-### How Configuration Works Internally
-
-**For beginners:** Understanding how configuration flows through the application:
-
-1. **Configuration Files (`env.json`):**
-   - Contains all application settings
-   - Watched for changes during development
-   - Automatically reloaded when modified
-
-2. **Config Loading (`internal/config/load_config.go`):**
-
-   ```go
-   config.LoadConfig()           // Initialize config loader
-   appCfg := config.GetAppRestApi()  // Get REST API config
-   ```
-
-3. **Config Types (`internal/config/type.go`):**
-   - Defines struct types for all configurations
-   - Uses struct tags for JSON mapping: `env:"field_name"`
-
-4. **Usage in Application:**
-
-   ```go
-   // In cmd layer - Application startup
-   appCfg := config.GetAppRestApi()
-   provider.NewLogging(filename, slogHook, zerologHook, 
-                       appCfg.DebugMode, appCfg.Env, appCfg.Name)
-   
-   // In app layer - Feature initialization
-   appCfg := config.GetAppRestApi()
-   db := provider.NewDB(appCfg.DebugMode)
-   ```
-
-**Configuration Flow:**
-
-```sh
-env.json → LoadConfig() → root struct → Getter functions → Application
-```
-
-**Getter Functions:**
-
-- `config.GetAppRestApi()` - Get REST API config
-- `config.GetAppGrpcApi()` - Get gRPC API config
-- `config.GetAppScheduler()` - Get Scheduler config
-- `config.GetDatabase()` - Get database config
-- `config.GetPprof()` - Get pprof config
-
-**Why This Design?**
-
-- **Separation of Concerns:** Config loading separated from business logic
-- **Type Safety:** Strongly typed configuration access
-- **Hot-Reload:** Changes detected automatically in development
-- **Testability:** Easy to mock config in tests
-- **Independence:** Each app can use different configs
-
-## Project Structure
-
-### Domain Layer (`internal/domain/`)
-
-The domain layer contains business logic interfaces and data structures. Each domain represents a business capability:
-
-```text
-internal/domain/<feature>/
-├── dto.go              # Data Transfer Objects
-├── repository.go       # Repository interface definitions
-├── service.go          # Service interface definitions
-└── value_object.go     # Domain value objects and enums
-```
-
-**Key principles:**
-
-- Defines **interfaces only**, no implementation
-- Contains DTOs, value objects, and business rules
-- Framework-agnostic and pure Go code
-- Generates mock interfaces for testing using `go:generate` directives
-
-**Example:**
-
-```go
-type HealthCheckService interface {
-    CheckDependencies(ctx context.Context) (output CheckDependenciesOutput)
-}
-```
-
-### Module Layer (`internal/module/`)
-
-The module layer contains concrete implementations of domain interfaces. This is where the actual business logic lives:
-
-```text
-internal/module/<feature>/
-├── repository/
-│   ├── repo_<feature>.go              # Repository interface wrapper
-│   ├── repo_<feature>_datastore.go    # Database implementation
-│   └── repo_<feature>_datastore_test.go
-└── service/
-    ├── service_<feature>.go           # Service implementation
-    └── service_<feature>_test.go
-```
-
-**Key principles:**
-
-- Implements domain interfaces
-- Contains actual business logic
-- Handles data persistence and external dependencies
-- Separated into `repository` (data access) and `service` (business logic)
-- Each implementation can have multiple variants (e.g., datastore, cache, external API)
-
-**Example:**
-
-```go
-type service struct {
-    healthcheckRepo domainhealthcheck.HealthCheckRepositoryDatastore
-}
-
-func (s *service) CheckDependencies(ctx context.Context) (output domainhealthcheck.CheckDependenciesOutput) {
-    // Business logic implementation
-}
-```
-
-### Transport Layer (`internal/transport/`)
-
-The transport layer acts as the adapter between external protocols (HTTP REST, gRPC) and your domain/business logic. It handles request/response transformation and protocol-specific concerns:
-
-```text
-internal/transport/<feature>/
-├── grpc_<feature>.go      # gRPC handlers
-└── restapi_<feature>.go   # REST API handlers
-```
-
-**Key principles:**
-
-- Handles protocol-specific request/response formatting
-- Transforms between protocol types (protobuf, HTTP) and domain DTOs
-- No business logic - only marshalling/unmarshalling and calling services
-- Each transport handler depends on domain service interfaces
-- Thin layer that delegates to the domain/module layer
-
-**gRPC Transport Example:**
-
-```go
-package transporthealthcheck
-
-import (
-    "context"
-    domainhealthcheck "project/internal/domain/healthcheck"
-    "project/internal/gen/grpcgen/healthcheck"
-)
-
-type TransportHealthCheckGrpc struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-    healthcheck.UnimplementedHealthCheckServiceServer
-}
-
-func NewTransportGrpc(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckGrpc {
-    return &TransportHealthCheckGrpc{
-        healthcheckService: healthcheckService,
-    }
-}
-
-func (t *TransportHealthCheckGrpc) ApiV1HealthCheck(
-    ctx context.Context, 
-    req *healthcheck.ApiV1HealthCheckRequest,
-) (*healthcheck.ApiV1HealthCheckResponse, error) {
-    // Call domain service
-    output := t.healthcheckService.CheckDependencies(ctx)
-
-    // Transform domain output to protobuf response
-    return &healthcheck.ApiV1HealthCheckResponse{
-        Status:    mapStatusToProto(output.Status),
-        Timestamp: timestamppb.New(output.Timestamp),
-        Dependencies: &healthcheck.Dependencies{
-            Database: &healthcheck.Dependency{
-                Status:       mapDependencyStatusToProto(output.Database.Status),
-                ResponseTime: output.Database.ResponseTime.String(),
-                Message:      output.Database.Message,
-            },
-        },
-    }, nil
-}
-```
-
-**REST API Transport Example:**
-
-```go
-package transporthealthcheck
-
-import (
-    "net/http"
-    domainhealthcheck "project/internal/domain/healthcheck"
-    "project/internal/gen/restapigen"
-)
-
-type TransportHealthCheckRestApi struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-}
-
-func NewTransportRestApi(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckRestApi {
-    return &TransportHealthCheckRestApi{
-        healthcheckService: healthcheckService,
-    }
-}
-
-func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
-    w http.ResponseWriter, 
-    r *http.Request,
-) {
-    // Call domain service
-    output := t.healthcheckService.CheckDependencies(r.Context())
-
-    // Transform domain output to REST API response
-    resp := restapigen.ApiV1GetHealthCheckResponse{
-        Status:    restapigen.Status(output.Status),
-        Timestamp: output.Timestamp,
-        Dependencies: restapigen.Dependencies{
-            Database: &restapigen.Dependency{
-                Status:       restapigen.DependencyStatus(output.Database.Status),
-                ResponseTime: output.Database.ResponseTime.String(),
-                Message:      output.Database.Message,
-            },
-        },
-    }
-
-    // Write JSON response
-    writeJSON(w, http.StatusOK, resp)
-}
-```
-
-**Transport Responsibilities:**
-
-- **Request Parsing** - Extract and validate request parameters
-- **Data Transformation** - Convert between protocol types and domain DTOs
-- **Response Formatting** - Serialize domain outputs to protocol responses
-- **Error Handling** - Map domain errors to appropriate HTTP/gRPC status codes
-- **Protocol Concerns** - Handle HTTP headers, gRPC metadata, status codes
-
-**Transport Does NOT:**
-
-- Contain business logic
-- Directly access databases or external services
-- Perform data validation (domain layer responsibility)
-- Make decisions based on business rules
-
-### Worker Layer (`internal/worker/`)
-
-The worker layer is responsible for **all background processing tasks**. This includes scheduled jobs (cron), message broker consumers (Kafka, RabbitMQ), and any asynchronous processing that runs independently of HTTP/gRPC requests.
-
-```text
-internal/worker/<feature>/
-├── cron_<feature>.go       # Scheduled jobs (cron)
-├── consumer_<feature>.go   # Message broker consumers (future)
-└── job_<feature>.go        # Other background jobs (future)
-```
-
-**What Goes in Worker Layer:**
-
-1. **Scheduled Jobs (Cron)** - Time-triggered tasks
-   - Health checks
-   - Data cleanup
-   - Report generation
-   - Scheduled notifications
-
-2. **Message Consumers (Future)** - Event-driven tasks
-   - Kafka consumers
-   - RabbitMQ consumers
-   - Redis pub/sub subscribers
-   - Event processing
-
-3. **Background Jobs** - Async processing
-   - Email sending
-   - File processing
-   - Data synchronization
-   - Batch operations
-
-**Key principles:**
-
-- Handles all background processing (scheduled, event-driven, async)
-- No business logic - only triggering and calling services
-- Each worker depends on domain service interfaces
-- Thin layer that delegates to the domain/module layer
-- Independent from HTTP/gRPC layers
-
-**Scheduler (Cron) Example:**
-
-```go
-package workerhealthcheck
-
-import (
-    "context"
-    "log"
-    "time"
-    domainhealthcheck "project/internal/domain/healthcheck"
-)
-
-type WorkerHealthCheck struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-}
-
-func NewWorker(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *WorkerHealthCheck {
-    return &WorkerHealthCheck{
-        healthcheckService: healthcheckService,
-    }
-}
-
-// CronCheckDependencies runs periodic health checks
-// Cron schedule: "*/5 * * * *" (every 5 minutes)
-func (w *WorkerHealthCheck) CronCheckDependencies() {
-    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancel()
-
-    log.Println("[CRON] Starting health check...")
-
-    // Call domain service
-    output := w.healthcheckService.CheckDependencies(ctx)
-
-    // Log results or send alerts
-    if output.Status != domainhealthcheck.StatusHealthCheckOk {
-        log.Printf("[CRON] Health check failed: %s", output.Status)
-        // Send alert to monitoring system
-    } else {
-        log.Println("[CRON] Health check passed")
-    }
-}
-
-// CronCleanupOldData runs periodic data cleanup
-// Cron schedule: "0 2 * * *" (daily at 2 AM)
-func (w *WorkerHealthCheck) CronCleanupOldData() {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-    defer cancel()
-
-    log.Println("[CRON] Starting cleanup job...")
-
-    // Call domain service for cleanup
-    // err := w.cleanupService.CleanupOldData(ctx)
-    
-    log.Println("[CRON] Cleanup job completed")
-}
-```
-
-**Registering Cron Jobs (using robfig/cron):**
-
-```go
-package app
-
-import (
-    "github.com/robfig/cron/v3"
-    workerhealthcheck "project/internal/worker/healthcheck"
-)
-
-func InitCronJobs(
-    healthcheckWorker *workerhealthcheck.WorkerHealthCheck,
-) *cron.Cron {
-    c := cron.New()
-
-    // Every 5 minutes
-    c.AddFunc("*/5 * * * *", healthcheckWorker.CronCheckDependencies)
-
-    // Daily at 2 AM
-    c.AddFunc("0 2 * * *", healthcheckWorker.CronCleanupOldData)
-
-    return c
-}
-```
-
-**Worker Responsibilities:**
-
-- **Schedule Management** - Register and manage cron schedules
-- **Event Processing** - Consume and process messages from brokers
-- **Context Creation** - Create proper context with timeouts for jobs
-- **Error Handling** - Handle errors and send alerts if jobs fail
-- **Logging** - Log job execution for monitoring
-- **Service Delegation** - Call domain services to perform actual work
-
-**Worker Does NOT:**
-
-- Contain business logic
-- Directly access databases or external services
-- Make decisions based on business rules
-- Handle HTTP requests or gRPC calls (use Transport layer for that)
-
-**Worker vs Transport Layer:**
-
-| Aspect | Worker Layer | Transport Layer |
-|--------|-------------|-----------------|
-| **Trigger** | Time schedule, events, async | HTTP/gRPC requests |
-| **Entry Point** | Cron, message broker, background | API endpoint |
-| **Response** | No response (fire and forget) | Synchronous response required |
-| **Use Cases** | Scheduled jobs, event processing | API requests, real-time operations |
-| **Examples** | Daily cleanup, Kafka consumer | GET /users, gRPC GetUser |
-
-### Other Important Directories
-
-- `api/` - API specifications (OpenAPI YAML, Protocol Buffers)
-- `cmd/` - Application entry points and CLI commands
-- `internal/app/` - Application initialization (gRPC, REST API, routing)
-- `internal/config/` - Configuration loading and types
-- `internal/gen/` - Auto-generated code (excluded from git, must run `make generate` after cloning)
-  - `grpcgen/` - Generated gRPC server stubs and protocol buffer types from `.proto` files in `api/proto`
-  - `restapigen/` - Generated REST API server handlers and types from OpenAPI in files`api/openapi/api.yaml` specification
-  - `mockgen/` - Generated mock implementations of domain interfaces for testing
-- `internal/provider/` - Infrastructure providers (database, observability)
-- `internal/transport/` - Transport layer handlers (gRPC, REST API)
-- `internal/worker/` - Background job handlers (cron jobs, scheduled tasks)
-
-## Architecture Flow
-
-1. **API Specification** (`api/`) → Defines contracts
-2. **Code Generation** → Creates server stubs and types
-3. **Domain Layer** → Defines business interfaces
-4. **Module Layer** → Implements business logic
-5. **Entry Points** → Handles requests via:
-   - Transport Layer (HTTP/gRPC)
-   - Worker Layer (Cron jobs)
-6. **Application Layer** → Wires everything together
-
-## Development Workflow
-
-1. Define your API contract in `api/openapi/api.yaml` or `api/proto/`
-2. Create domain interfaces in `internal/domain/<feature>/`
-3. Implement business logic in `internal/module/<feature>/`
-4. Create entry point handlers:
-   - Transport handlers in `internal/transport/<feature>/` for HTTP/gRPC
-   - Worker handlers in `internal/worker/<feature>/` for cron jobs
-5. Run `make generate` to generate code
-6. Wire dependencies in `internal/app/`
-7. Run the application with `make run-restapi` or `make run-grpcapi`
-
-## Naming Conventions
-
-### Folder vs Package Names
-
-**IMPORTANT:** Folder names and package names follow different conventions:
-
-**Folder Names:**
-
-- Use simple, lowercase feature names
-- No prefixes or suffixes
-- Examples: `healthcheck/`, `user/`, `product/`
-
-**Package Names:**
-
-- Use descriptive names with prefixes indicating the layer
-- Combine folder location + feature name
-- Examples: `domainhealthcheck`, `healthcheckservice`, `transporthealthcheck`
-
-**Examples:**
-
-```text
-# Domain Layer
-Folder:  internal/domain/healthcheck/
-Package: package domainhealthcheck
-
-Folder:  internal/domain/user/
-Package: package domainuser
-
-# Module Layer - Service
-Folder:  internal/module/healthcheck/service/
-Package: package healthcheckservice
-
-Folder:  internal/module/user/service/
-Package: package userservice
-
-# Module Layer - Repository
-Folder:  internal/module/healthcheck/repository/
-Package: package healthcheckrepository
-
-Folder:  internal/module/user/repository/
-Package: package userrepository
-
-# Transport Layer
-Folder:  internal/transport/healthcheck/
-Package: package transporthealthcheck
-
-Folder:  internal/transport/user/
-Package: package transportuser
-
-# Worker Layer
-Folder:  internal/worker/healthcheck/
-Package: package workerhealthcheck
-
-Folder:  internal/worker/user/
-Package: package workeruser
-```
-
-### Package Names Rules
-
-- Use lowercase, single word package names when possible
-- For domain packages, prefix with `domain`: `domainhealthcheck`, `domainuser`
-- For service packages, use feature + `service`: `healthcheckservice`, `userservice`
-- For repository packages, use feature + `repository`: `healthcheckrepository`, `userrepository`
-- For transport packages, prefix with `transport`: `transporthealthcheck`, `transportuser`
-- For worker packages, prefix with `worker`: `workerhealthcheck`, `workeruser`
-
-**Example:**
-
-```go
-package domainhealthcheck    // domain layer
-package healthcheckservice   // module service implementation
-package transporthealthcheck // transport layer
-package workerhealthcheck    // worker layer
-```
-
-### Interface Names
-
-Interfaces should describe behavior and use clear, descriptive names:
-
-**Service Interfaces:**
-
-```go
-type HealthCheckService interface {
-    CheckDependencies(ctx context.Context) (output CheckDependenciesOutput)
-}
-
-type UserService interface {
-    CreateUser(ctx context.Context, input CreateUserInput) (output CreateUserOutput, err error)
-    GetUserByID(ctx context.Context, userID string) (output UserOutput, err error)
-}
-```
-
-**Repository Interfaces:**
-
-```go
-type HealthCheckRepositoryDatastore interface {
-    PingDatabase(ctx context.Context) (responseTime time.Duration, err error)
-}
-
-type UserRepositoryDatastore interface {
-    Create(ctx context.Context, user User) (err error)
-    FindByID(ctx context.Context, id string) (user User, err error)
-}
-```
-
-### Struct Names
-
-**Implementation Structs:**
-
-Use lowercase `service` or `repository` for concrete implementations:
-
-```go
-type service struct {
-    healthcheckRepo domainhealthcheck.HealthCheckRepositoryDatastore
-}
-
-type repository struct {
-    db *sql.DB
-}
-```
-
-**DTO/Value Object Structs:**
-
-Use descriptive names with suffixes indicating their purpose:
-
-```go
-// Input DTOs - for incoming data
-type CreateUserInput struct {
-    Name  string
-    Email string
-}
-
-// Output DTOs - for outgoing data
-type CreateUserOutput struct {
-    UserID    string
-    CreatedAt time.Time
-}
-
-type UserOutput struct {
-    ID        string
-    Name      string
-    Email     string
-    CreatedAt time.Time
-}
-
-// Value Objects - domain entities
-type User struct {
-    ID        string
-    Name      string
-    Email     string
-    Status    UserStatus
-    CreatedAt time.Time
-}
-```
-
-### File Names
-
-Follow Go conventions with snake_case:
-
-```text
-// Domain layer
-dto.go                  # Data Transfer Objects
-repository.go           # Repository interfaces
-service.go              # Service interfaces
-value_object.go         # Domain entities and enums
-
-// Module layer - Repository
-repo_<feature>.go              # e.g., repo_healthcheck.go
-repo_<feature>_datastore.go    # e.g., repo_healthcheck_datastore.go
-repo_<feature>_cache.go        # e.g., repo_user_cache.go
-
-// Module layer - Service
-service_<feature>.go           # e.g., service_healthcheck.go
-service_<feature>_test.go      # e.g., service_healthcheck_test.go
-
-// Transport layer
-grpc_<feature>.go              # e.g., grpc_healthcheck.go
-restapi_<feature>.go           # e.g., restapi_healthcheck.go
-
-// Worker layer
-cron_<feature>.go              # e.g., cron_healthcheck.go
-```
-
-### Transport Layer Naming
-
-**Package Name:**
-
-```go
-package transporthealthcheck  // prefix 'transport' + feature name
-package transportuser
-package transportproduct
-```
-
-**Struct Names:**
-
-Use descriptive names with `Transport` prefix and protocol suffix:
-
-```go
-// gRPC Transport
-type TransportHealthCheckGrpc struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-    healthcheck.UnimplementedHealthCheckServiceServer
-}
-
-type TransportUserGrpc struct {
-    userService domainuser.UserService
-    user.UnimplementedUserServiceServer
-}
-
-// REST API Transport
-type TransportHealthCheckRestApi struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-}
-
-type TransportUserRestApi struct {
-    userService domainuser.UserService
-}
-```
-
-**Constructor Names:**
-
-```go
-// gRPC Transport Constructor
-func NewTransportGrpc(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckGrpc {
-    return &TransportHealthCheckGrpc{
-        healthcheckService: healthcheckService,
-    }
-}
-
-// REST API Transport Constructor
-func NewTransportRestApi(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckRestApi {
-    return &TransportHealthCheckRestApi{
-        healthcheckService: healthcheckService,
-    }
-}
-```
-
-**Method Names:**
-
-Methods should match the generated API contract:
-
-```go
-// gRPC - matches protobuf service definition
-func (t *TransportHealthCheckGrpc) ApiV1HealthCheck(
-    ctx context.Context, 
-    req *healthcheck.ApiV1HealthCheckRequest,
-) (*healthcheck.ApiV1HealthCheckResponse, error) {
-    // Implementation
-}
-
-func (t *TransportUserGrpc) ApiV1CreateUser(
-    ctx context.Context,
-    req *user.ApiV1CreateUserRequest,
-) (*user.ApiV1CreateUserResponse, error) {
-    // Implementation
-}
-
-// REST API - matches OpenAPI operation IDs
-func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
-    w http.ResponseWriter, 
-    r *http.Request,
-) {
-    // Implementation
-}
-
-func (t *TransportUserRestApi) ApiV1PostUsers(
-    w http.ResponseWriter, 
-    r *http.Request,
-) {
-    // Implementation
-}
-```
-
-**File Organization:**
-
-```text
-internal/transport/healthcheck/
-├── grpc_healthcheck.go      # Contains: TransportHealthCheckGrpc
-└── restapi_healthcheck.go   # Contains: TransportHealthCheckRestApi
-
-internal/transport/user/
-├── grpc_user.go             # Contains: TransportUserGrpc
-└── restapi_user.go          # Contains: TransportUserRestApi
-```
-
-### Worker Layer Naming
-
-**Package Name:**
-
-```go
-package workerhealthcheck  // prefix 'worker' + feature name
-package workeruser
-package workerproduct
-```
-
-**Struct Names:**
-
-Use descriptive names with `Worker` prefix:
-
-```go
-type WorkerHealthCheck struct {
-    healthcheckService domainhealthcheck.HealthCheckService
-}
-
-type WorkerUser struct {
-    userService domainuser.UserService
-}
-```
-
-**Constructor Names:**
-
-```go
-func NewWorker(
-    healthcheckService domainhealthcheck.HealthCheckService,
-) *WorkerHealthCheck {
-    return &WorkerHealthCheck{
-        healthcheckService: healthcheckService,
-    }
-}
-```
-
-**Method Names:**
-
-Methods should use `Cron` prefix to indicate scheduled jobs:
-
-```go
-func (w *WorkerHealthCheck) CronCheckDependencies() {
-    // Implementation
-}
-
-func (w *WorkerUser) CronSendDailyReport() {
-    // Implementation
-}
-
-func (w *WorkerUser) CronCleanupInactiveUsers() {
-    // Implementation
-}
-```
-
-**File Organization:**
-
-```text
-internal/worker/healthcheck/
-└── cron_healthcheck.go      # Contains: WorkerHealthCheck
-
-internal/worker/user/
-└── cron_user.go             # Contains: WorkerUser
-```
-
-### Method Names
-
-**Service Methods:**
-
-Use descriptive verb-noun combinations:
-
-```go
-CheckDependencies(ctx context.Context) (output CheckDependenciesOutput)
-CreateUser(ctx context.Context, input CreateUserInput) (output CreateUserOutput, err error)
-GetUserByID(ctx context.Context, userID string) (output UserOutput, err error)
-UpdateUserStatus(ctx context.Context, userID string, status UserStatus) (err error)
-DeleteUser(ctx context.Context, userID string) (err error)
-```
-
-**Repository Methods:**
-
-Use simple CRUD operations or specific queries:
-
-```go
-Create(ctx context.Context, user User) (err error)
-FindByID(ctx context.Context, id string) (user User, err error)
-FindByEmail(ctx context.Context, email string) (user User, err error)
-Update(ctx context.Context, user User) (err error)
-Delete(ctx context.Context, id string) (err error)
-PingDatabase(ctx context.Context) (responseTime time.Duration, err error)
-```
-
-### Constants and Enums
-
-Use typed constants with descriptive names:
-
-```go
-type StatusHealthCheck string
-
-const (
-    StatusHealthCheckOk       StatusHealthCheck = "OK"
-    StatusHealthCheckDegraded StatusHealthCheck = "DEGRADED"
-    StatusHealthCheckDown     StatusHealthCheck = "DOWN"
-)
-
-type UserStatus string
-
-const (
-    UserStatusActive   UserStatus = "ACTIVE"
-    UserStatusInactive UserStatus = "INACTIVE"
-    UserStatusSuspended UserStatus = "SUSPENDED"
-)
-```
-
-### Function Parameters and Return Values
-
-**Named Return Values:**
-
-Use named returns for clarity, especially for multiple return values:
-
-```go
-func (s *service) CheckDependencies(ctx context.Context) (output CheckDependenciesOutput) {
-    // Implementation
-    return
-}
-
-func (s *service) CreateUser(ctx context.Context, input CreateUserInput) (output CreateUserOutput, err error) {
-    // Implementation
-    return
-}
-```
-
-**Input/Output Pattern:**
-
-For service methods with complex data:
-
-```go
-type CreateUserInput struct {
-    Name     string
-    Email    string
-    Password string
-}
-
-type CreateUserOutput struct {
-    UserID    string
-    CreatedAt time.Time
-}
-
-func (s *service) CreateUser(ctx context.Context, input CreateUserInput) (output CreateUserOutput, err error) {
-    // Implementation
-}
-```
-
-### Constructor Functions
-
-Use `New` prefix for constructors:
-
-```go
-func NewService(
-    healthcheckRepo domainhealthcheck.HealthCheckRepositoryDatastore,
-) *service {
-    return &service{
-        healthcheckRepo: healthcheckRepo,
-    }
-}
-
-func NewRepository(db *sql.DB) *repository {
-    return &repository{
-        db: db,
-    }
-}
-```
-
-## Testing
-
-The project uses mockgen for generating mocks. Mocks are automatically generated when you run `make generate` or `make go_generate`.
-
-To generate mocks for a specific interface, add a `go:generate` directive in your domain file:
-
-```go
-//go:generate go tool mockgen -source=service.go -destination=../../gen/mockgen/feature_service_mock.gen.go -package=mockgen
-```
+See [Configuration Guide](docs/CONFIGURATION.md) for details.
 
 ## Performance & Debugging
 
+### Pprof Profiling
+
+Each application has built-in pprof support with realtime hot-reload:
+
+```bash
+# Enable pprof in env.json
+{
+    "app_rest_api": {
+        "pprof": {
+            "enable": true,
+            "port": 8080
+        }
+    }
+}
+
+# Access pprof endpoints
+curl http://localhost:8080/debug/pprof/heap
+curl http://localhost:8080/debug/pprof/goroutine
+open http://localhost:8080/debug/pprof/
+```
+
 ### Memory Leak Detection
-
-The application includes built-in pprof endpoints for profiling and memory leak detection. For detailed instructions on detecting and analyzing memory leaks, see:
-
-**[Memory Leak Detection Guide](docs/MEMORY_LEAK_DETECTION.md)**
-
-Quick access to pprof endpoints (replace `<PORT>` with your application port):
-
-- Heap Profile: `http://localhost:<PORT>/debug/pprof/heap`
-- Goroutine Profile: `http://localhost:<PORT>/debug/pprof/goroutine`
-- All Profiles: `http://localhost:<PORT>/debug/pprof/`
-
-Example workflow:
 
 ```bash
 # Capture baseline
@@ -1146,3 +247,84 @@ curl http://localhost:8080/debug/pprof/heap > heap_after.prof
 # Compare profiles
 go tool pprof -base=heap_before.prof heap_after.prof
 ```
+
+See [Memory Leak Detection Guide](docs/MEMORY_LEAK_DETECTION.md) for detailed instructions.
+
+## Testing
+
+The project uses mockgen for generating mocks:
+
+```go
+// In domain file (e.g., internal/domain/user/service.go)
+//go:generate go tool mockgen -source=service.go -destination=../../gen/mockgen/user_service_mock.gen.go -package=mockgen
+
+// Generate mocks
+make go_generate
+```
+
+## Key Features
+
+- **✅ Clean Architecture** - Clear separation of concerns with domain/module/transport layers
+- **✅ Hot-Reload Config** - Configuration changes detected automatically in development
+- **✅ Code Generation** - OpenAPI → REST handlers, Protobuf → gRPC stubs, Mockgen → Test mocks
+- **✅ Multiple Protocols** - REST API, gRPC API, and background workers in one project
+- **✅ Structured Logging** - slog-based structured logging throughout
+- **✅ Built-in Profiling** - pprof endpoints with hot-reload for performance analysis
+- **✅ Graceful Shutdown** - Proper cleanup and shutdown handling
+- **✅ Dependency Injection** - Clear dependency wiring in app layer
+- **✅ Background Jobs** - Cron scheduler with robfig/cron v3 (supports seconds)
+- **✅ Testing Support** - Mock generation for all domain interfaces
+
+## Examples
+
+### Quick Examples
+
+**Create a new feature:**
+
+```bash
+# 1. Define API in api/openapi/api.yaml or api/proto/
+# 2. Create domain interfaces
+mkdir -p internal/domain/product
+touch internal/domain/product/{dto.go,service.go,repository.go,value_object.go}
+
+# 3. Implement business logic
+mkdir -p internal/module/product/{service,repository}
+
+# 4. Create transport handlers
+mkdir -p internal/transport/product
+touch internal/transport/product/{grpc_product.go,restapi_product.go}
+
+# 5. Generate code
+make generate
+
+# 6. Wire dependencies in internal/app/
+```
+
+**Add a cron job:**
+
+```bash
+# 1. Create worker
+mkdir -p internal/worker/product
+touch internal/worker/product/scheduler_product.go
+
+# 2. Implement job method
+func (w *SchedulerProduct) CleanupOldData() {
+    // Job implementation
+}
+
+# 3. Register in internal/app/scheduler.go
+c.AddFunc("0 0 2 * * *", productWorker.CleanupOldData)
+```
+
+See detailed examples in:
+
+- [Transport Examples](docs/TRANSPORT_EXAMPLES.md) - gRPC & REST API handlers
+- [Worker Examples](docs/WORKER_EXAMPLES.md) - Cron jobs & schedulers
+
+## Contributing
+
+1. Follow the [Naming Conventions](docs/NAMING_CONVENTIONS.md)
+2. Keep layers properly separated (no business logic in transport/worker)
+3. Write tests with generated mocks
+4. Run `make generate` before committing
+5. Use structured logging (slog)
