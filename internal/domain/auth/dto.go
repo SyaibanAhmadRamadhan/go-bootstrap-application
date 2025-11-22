@@ -2,10 +2,6 @@ package domainauth
 
 import "time"
 
-// ============================================
-// Login Operation
-// ============================================
-
 type LoginInput struct {
 	Email    string
 	Password string
@@ -18,10 +14,6 @@ type LoginOutput struct {
 	TokenType    string
 }
 
-// ============================================
-// Refresh Token Operation
-// ============================================
-
 type RefreshTokenInput struct {
 	RefreshToken string
 }
@@ -33,10 +25,6 @@ type RefreshTokenOutput struct {
 	TokenType    string
 }
 
-// ============================================
-// Logout Operation
-// ============================================
-
 type LogoutInput struct {
 	AccessToken  string
 	RefreshToken string
@@ -47,10 +35,6 @@ type LogoutOutput struct {
 	Message string
 }
 
-// ============================================
-// Validate Token Operation
-// ============================================
-
 type ValidateTokenInput struct {
 	Token string
 }
@@ -60,10 +44,6 @@ type ValidateTokenOutput struct {
 	Payload   *TokenPayload
 	ExpiresAt time.Time
 }
-
-// ============================================
-// Revoke Token Operation
-// ============================================
 
 type RevokeTokenInput struct {
 	Token string

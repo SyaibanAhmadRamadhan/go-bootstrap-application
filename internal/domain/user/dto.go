@@ -1,14 +1,11 @@
 package domainuser
 
 import (
+	sharedkernel "go-bootstrap/internal/domain/shared"
 	"time"
 
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/utils/primitive"
 )
-
-// ============================================
-// Register Operation
-// ============================================
 
 type RegisterInput struct {
 	Email    string
@@ -25,10 +22,6 @@ type RegisterOutput struct {
 	CreatedAt time.Time
 }
 
-// ============================================
-// GetProfile Operation
-// ============================================
-
 type GetProfileInput struct {
 	UserID string
 }
@@ -37,14 +30,10 @@ type GetProfileOutput struct {
 	User User
 }
 
-// ============================================
-// GetList Operation
-// ============================================
-
 type GetListInput struct {
 	Pagination primitive.PaginationInput
 	Search     *string
-	Status     *UserStatus
+	Status     *sharedkernel.UserStatus
 	Role       *UserRole
 }
 
@@ -52,10 +41,6 @@ type GetListOutput struct {
 	Users      []User
 	Pagination primitive.PaginationOutput
 }
-
-// ============================================
-// UpdateProfile Operation
-// ============================================
 
 type UpdateProfileInput struct {
 	UserID string
@@ -69,10 +54,6 @@ type UpdateProfileOutput struct {
 	UpdatedAt time.Time
 }
 
-// ============================================
-// ChangePassword Operation
-// ============================================
-
 type ChangePasswordInput struct {
 	UserID      string
 	OldPassword string
@@ -84,13 +65,9 @@ type ChangePasswordOutput struct {
 	UpdatedAt time.Time
 }
 
-// ============================================
-// UpdateStatus Operation (Admin only)
-// ============================================
-
 type UpdateStatusInput struct {
 	UserID string
-	Status UserStatus
+	Status sharedkernel.UserStatus
 }
 
 type UpdateStatusOutput struct {

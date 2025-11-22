@@ -18,9 +18,10 @@ func (r *repository) GetDetailUser(ctx context.Context, filters domainauth.GetDe
 		"password_hash",
 		"name",
 		"role",
+		"status",
 		"created_at",
 		"updated_at",
-	).From("users").Where("status = ?", "active")
+	).From("users")
 
 	if filters.UserID != nil {
 		sq = sq.Where("id = ?", *filters.UserID)
@@ -35,7 +36,7 @@ func (r *repository) GetDetailUser(ctx context.Context, filters domainauth.GetDe
 	var result domainauth.GetDetailUserResult
 	row, err := r.db.RDBMS().QueryRowSq(ctx, sq, false)
 	if err != nil {
-		return domainauth.GetDetailUserResult{}, fmt.Errorf("failed to get user: %w", err)
+		return domainauth.GetDetailUserResult{}, fmt.Errorf("failed to get token: %w", err)
 	}
 
 	err = row.Scan(
@@ -44,6 +45,7 @@ func (r *repository) GetDetailUser(ctx context.Context, filters domainauth.GetDe
 		&result.PasswordHash,
 		&result.Name,
 		&result.Role,
+		&result.Status,
 		&result.CreatedAt,
 		&result.UpdatedAt,
 	)

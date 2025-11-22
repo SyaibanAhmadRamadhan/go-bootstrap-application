@@ -38,6 +38,10 @@ func (s *service) Login(ctx context.Context, input domainauth.LoginInput) (domai
 		return domainauth.LoginOutput{}, apperror.BadRequest("invalid email or password")
 	}
 
+	if err = user.Status.CanLogin(); err != nil {
+		return domainauth.LoginOutput{}, apperror.BadRequest(err.Error())
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password))
 	if err != nil {
 		return domainauth.LoginOutput{}, apperror.BadRequest("invalid email or password")

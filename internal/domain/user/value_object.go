@@ -1,14 +1,8 @@
 package domainuser
 
-import "time"
-
-// User Status
-type UserStatus string
-
-const (
-	UserStatusActive    UserStatus = "active"
-	UserStatusInactive  UserStatus = "inactive"
-	UserStatusSuspended UserStatus = "suspended"
+import (
+	sharedkernel "go-bootstrap/internal/domain/shared"
+	"time"
 )
 
 // User Role
@@ -34,7 +28,7 @@ type User struct {
 	Email     string
 	Name      string
 	Role      UserRole
-	Status    UserStatus
+	Status    sharedkernel.UserStatus
 	Gender    *Gender
 	Phone     *string
 	CreatedAt time.Time

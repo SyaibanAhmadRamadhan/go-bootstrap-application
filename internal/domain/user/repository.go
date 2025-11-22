@@ -4,35 +4,25 @@ package domainuser
 
 import (
 	"context"
+	sharedkernel "go-bootstrap/internal/domain/shared"
 	"time"
 
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/utils/primitive"
 )
 
-// UserRepositoryDatastore - for database operations related to users
 type UserRepositoryDatastore interface {
-	// CreateUser creates a new user record
 	CreateUser(ctx context.Context, params CreateUserParams) (CreateUserResult, error)
 
-	// GetDetailUser retrieves user details
 	GetDetailUser(ctx context.Context, filters GetDetailUserFilters) (GetDetailUserResult, error)
 
-	// GetListUser retrieves list of users with pagination
 	GetListUser(ctx context.Context, filters GetListUserFilters) (GetListUserResult, error)
 
-	// UpdateUser updates user information
 	UpdateUser(ctx context.Context, params UpdateUserParams) (UpdateUserResult, error)
 
-	// UpdatePassword updates user password
 	UpdatePassword(ctx context.Context, params UpdatePasswordParams) (UpdatePasswordResult, error)
 
-	// UpdateStatus updates user status
 	UpdateStatus(ctx context.Context, params UpdateStatusParams) (UpdateStatusResult, error)
 }
-
-// ============================================
-// CreateUser - Create new user
-// ============================================
 
 type CreateUserParams struct {
 	Email        string
@@ -48,13 +38,9 @@ type CreateUserResult struct {
 	Email     string
 	Name      string
 	Role      UserRole
-	Status    UserStatus
+	Status    sharedkernel.UserStatus
 	CreatedAt time.Time
 }
-
-// ============================================
-// GetDetailUser - Get user details
-// ============================================
 
 type GetDetailUserFilters struct {
 	UserID *string
@@ -67,21 +53,17 @@ type GetDetailUserResult struct {
 	PasswordHash string // for authentication
 	Name         string
 	Role         UserRole
-	Status       UserStatus
+	Status       sharedkernel.UserStatus
 	Phone        *string
 	Gender       *Gender
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
 
-// ============================================
-// GetListUser - Get list of users
-// ============================================
-
 type GetListUserFilters struct {
 	Pagination primitive.PaginationInput
 	Search     *string // search by name or email
-	Status     *UserStatus
+	Status     *sharedkernel.UserStatus
 	Role       *UserRole
 }
 
@@ -89,10 +71,6 @@ type GetListUserResult struct {
 	Users      []GetDetailUserResult
 	Pagination primitive.PaginationOutput
 }
-
-// ============================================
-// UpdateUser - Update user profile
-// ============================================
 
 type UpdateUserParams struct {
 	UserID string
@@ -105,10 +83,6 @@ type UpdateUserResult struct {
 	UpdatedAt time.Time
 }
 
-// ============================================
-// UpdatePassword - Update user password
-// ============================================
-
 type UpdatePasswordParams struct {
 	UserID          string
 	NewPasswordHash string
@@ -118,13 +92,9 @@ type UpdatePasswordResult struct {
 	UpdatedAt time.Time
 }
 
-// ============================================
-// UpdateStatus - Update user status
-// ============================================
-
 type UpdateStatusParams struct {
 	UserID string
-	Status UserStatus
+	Status sharedkernel.UserStatus
 }
 
 type UpdateStatusResult struct {

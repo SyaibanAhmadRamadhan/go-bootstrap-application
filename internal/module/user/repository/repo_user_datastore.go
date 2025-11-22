@@ -10,6 +10,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/databases"
 
+	sharedkernel "go-bootstrap/internal/domain/shared"
 	domainuser "go-bootstrap/internal/domain/user"
 )
 
@@ -25,7 +26,7 @@ func (r *repository) CreateUser(ctx context.Context, params domainuser.CreateUse
 		params.PasswordHash,
 		params.Name,
 		params.Role,
-		domainuser.UserStatusActive,
+		sharedkernel.UserStatusActive,
 		params.Phone,
 		params.Gender,
 		now,
@@ -46,7 +47,7 @@ func (r *repository) CreateUser(ctx context.Context, params domainuser.CreateUse
 		Email:     params.Email,
 		Name:      params.Name,
 		Role:      params.Role,
-		Status:    domainuser.UserStatusActive,
+		Status:    sharedkernel.UserStatusActive,
 		CreatedAt: now,
 	}, nil
 }
