@@ -8,19 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type TransportHealthCheckRestApi struct {
+type HealthCheckRestApiHandler struct {
 	healthcheckService domainhealthcheck.HealthCheckService
 }
 
 func NewTransportRestApi(
 	healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckRestApi {
-	return &TransportHealthCheckRestApi{
+) *HealthCheckRestApiHandler {
+	return &HealthCheckRestApiHandler{
 		healthcheckService: healthcheckService,
 	}
 }
 
-func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(c *gin.Context) {
+func (t *HealthCheckRestApiHandler) ApiV1GetHealthCheck(c *gin.Context) {
 	outputHealthcheck := t.healthcheckService.CheckDependencies(c.Request.Context())
 
 	resp := restapigen.ApiV1GetHealthCheckResponse{

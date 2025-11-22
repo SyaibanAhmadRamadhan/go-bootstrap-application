@@ -7,9 +7,15 @@ import (
 	"go-bootstrap/internal/config"
 	"go-bootstrap/internal/gen/restapigen"
 	"go-bootstrap/internal/infrastructure"
+	authrepository "go-bootstrap/internal/module/auth/repository"
+	authservice "go-bootstrap/internal/module/auth/service"
 	healthcheckrepository "go-bootstrap/internal/module/healthcheck/repository"
 	healthcheckservice "go-bootstrap/internal/module/healthcheck/service"
+	userrepository "go-bootstrap/internal/module/user/repository"
+	userservice "go-bootstrap/internal/module/user/service"
+	transportauth "go-bootstrap/internal/transport/auth"
 	transporthealthcheck "go-bootstrap/internal/transport/healthcheck"
+	transportuser "go-bootstrap/internal/transport/user"
 	"io"
 	"log/slog"
 	"net/http"
@@ -110,13 +116,25 @@ func (r *restApiApp) init() routerRestApi {
 	}
 	r.closeFn = append(r.closeFn, db.Close)
 
-	_ = ginx.NewGinHelper("message", "errors")
+	ginHelper := ginx.NewGinHelper("message", "errors")
 
-	healthcheckRepo := healthcheckrepository.NewRepository(db)
-	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
+	healthcheckService := healthcheckservice.NewService(
+		healthcheckrepository.NewRepository(db),
+	)
+
+	authService := authservice.NewService(
+		authrepository.NewRepository(db),
+		authrepository.NewUserRepository(db),
+	)
+
+	userService := userservice.NewService(
+		userrepository.NewRepository(db),
+	)
 
 	router := routerRestApi{
-		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
+		HealthCheckRestApiHandler: transporthealthcheck.NewTransportRestApi(healthcheckService),
+		AuthRestAPIHandler:        transportauth.NewRestAPIHandler(authService, ginHelper),
+		UserRestAPIHandler:        transportuser.NewRestAPIHandler(userService, ginHelper),
 	}
 
 	return router
@@ -124,5 +142,7 @@ func (r *restApiApp) init() routerRestApi {
 
 type routerRestApi struct {
 	// restapigen.Unimplemented
-	*transporthealthcheck.TransportHealthCheckRestApi
+	*transporthealthcheck.HealthCheckRestApiHandler
+	*transportauth.AuthRestAPIHandler
+	*transportuser.UserRestAPIHandler
 }

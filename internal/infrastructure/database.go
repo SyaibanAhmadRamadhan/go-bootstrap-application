@@ -6,6 +6,7 @@ import (
 
 	"go-bootstrap/internal/config"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/databases/sqlx"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -13,6 +14,8 @@ import (
 type DB struct {
 	rdbms sqlx.RDBMS
 	sqlDB *sql.DB
+	sq    squirrel.StatementBuilderType
+	tx    sqlx.Tx
 }
 
 func NewDB() (DB, error) {
@@ -46,6 +49,8 @@ func NewDB() (DB, error) {
 	return DB{
 		rdbms: rdbms,
 		sqlDB: db,
+		sq:    squirrel.StatementBuilder.PlaceholderFormat(squirrel.Question),
+		tx:    rdbms,
 	}, nil
 }
 
@@ -53,8 +58,16 @@ func (d *DB) RDBMS() sqlx.RDBMS {
 	return d.rdbms
 }
 
+func (d *DB) Tx() sqlx.Tx {
+	return d.tx
+}
+
 func (d *DB) SQLDB() *sql.DB {
 	return d.sqlDB
+}
+
+func (d *DB) Sq() squirrel.StatementBuilderType {
+	return d.sq
 }
 
 func (d *DB) Close() error {

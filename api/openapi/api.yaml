@@ -8,13 +8,273 @@ servers:
   - url: 'http://localhost:8080'
     description: Local dev
 tags:
-  - name: iam
-    description: Identity & Access Management
-  - name: users
-    description: User profile & preferences
+  - name: auth
+    description: Authentication & Authorization
+  - name: user
+    description: User management
   - name: health
     description: Health check endpoints
 paths:
+  /api/v1/auth/login:
+    post:
+      operationId: ApiV1PostAuthLogin
+      summary: User login
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PostAuthLoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PostAuthLoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security: []
+      tags:
+        - auth
+  /api/v1/auth/refresh:
+    post:
+      operationId: ApiV1PostAuthRefresh
+      summary: Refresh access token
+      description: Generate new access token from refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PostAuthRefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PostAuthRefreshResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security: []
+      tags:
+        - auth
+  /api/v1/auth/logout:
+    post:
+      operationId: ApiV1PostAuthLogout
+      summary: User logout
+      description: Revoke user tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PostAuthLogoutRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PostAuthLogoutResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - auth
+  /api/v1/users/register:
+    post:
+      operationId: ApiV1PostUsersRegister
+      summary: Register new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PostUsersRegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PostUsersRegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security: []
+      tags:
+        - user
+  /api/v1/users/profile:
+    get:
+      operationId: ApiV1GetUsersProfile
+      summary: Get user profile
+      description: Retrieve authenticated user profile
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1GetUsersProfileResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - user
+    put:
+      operationId: ApiV1PutUsersProfile
+      summary: Update user profile
+      description: Update authenticated user profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PutUsersProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PutUsersProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - user
+  /api/v1/users:
+    get:
+      operationId: ApiV1GetUsers
+      summary: Get list of users
+      description: Retrieve list of users with pagination (admin only)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+              - suspended
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - admin
+              - user
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1GetUsersResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - user
+  /api/v1/users/change-password:
+    post:
+      operationId: ApiV1PostUsersChangePassword
+      summary: Change password
+      description: Change user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PostUsersChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PostUsersChangePasswordResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - user
+  '/api/v1/users/{user_id}/status':
+    put:
+      operationId: ApiV1PutUsersStatus
+      summary: Update user status
+      description: Update user status (admin only)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiV1PutUsersStatusRequest'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiV1PutUsersStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - user
   /api/v1/health:
     get:
       operationId: ApiV1GetHealthCheck
@@ -32,6 +292,295 @@ paths:
         - health
 components:
   schemas:
+    ApiV1PostAuthLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+      required:
+        - email
+        - password
+    ApiV1PostAuthLoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: dGVzdC1yZWZyZXNoLXRva2Vu...
+        expires_in:
+          description: Token expiry time in seconds
+          type: integer
+          format: int64
+          example: 900
+        token_type:
+          type: string
+          example: Bearer
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+        - token_type
+    ApiV1PostAuthRefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          example: dGVzdC1yZWZyZXNoLXRva2Vu...
+      required:
+        - refresh_token
+    ApiV1PostAuthRefreshResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int64
+        token_type:
+          type: string
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+        - token_type
+    ApiV1PostAuthLogoutRequest:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+      required:
+        - access_token
+    ApiV1PostAuthLogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Logged out successfully
+      required:
+        - success
+        - message
+    ApiV1PostUsersRegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: newuser@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+          minLength: 8
+        name:
+          type: string
+          example: John Doe
+        phone:
+          type: string
+          example: '+1234567890'
+          nullable: true
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          nullable: true
+      required:
+        - email
+        - password
+        - name
+    ApiV1PostUsersRegisterResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: '12345'
+        email:
+          type: string
+          example: newuser@example.com
+        name:
+          type: string
+          example: John Doe
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - email
+        - name
+        - created_at
+    ApiV1GetUsersProfileResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/ApiV1User'
+      required:
+        - user
+    ApiV1PutUsersProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: John Updated
+          nullable: true
+        phone:
+          type: string
+          example: '+1234567890'
+          nullable: true
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          nullable: true
+    ApiV1PutUsersProfileResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/ApiV1User'
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - user
+        - updated_at
+    ApiV1GetUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiV1User'
+        total_count:
+          type: integer
+          format: int64
+          example: 100
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 10
+      required:
+        - users
+        - total_count
+        - page
+        - page_size
+    ApiV1PostUsersChangePasswordRequest:
+      type: object
+      properties:
+        old_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+      required:
+        - old_password
+        - new_password
+    ApiV1PostUsersChangePasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - success
+        - updated_at
+    ApiV1PutUsersStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - suspended
+      required:
+        - status
+    ApiV1PutUsersStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - success
+        - updated_at
+    ApiV1User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '12345'
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: John Doe
+        role:
+          type: string
+          example: user
+          enum:
+            - admin
+            - user
+        status:
+          type: string
+          example: active
+          enum:
+            - active
+            - inactive
+            - suspended
+        phone:
+          type: string
+          example: '+1234567890'
+          nullable: true
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - role
+        - status
+        - created_at
+        - updated_at
     ApiV1GetHealthCheckResponse:
       type: object
       properties:
