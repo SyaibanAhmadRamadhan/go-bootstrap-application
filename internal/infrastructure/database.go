@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"erp-directory-service/internal/config"
+	"go-bootstrap/internal/config"
 
 	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/databases/sqlx"
 	_ "github.com/go-sql-driver/mysql"

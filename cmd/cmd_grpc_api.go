@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"erp-directory-service/internal/app"
-	"erp-directory-service/internal/config"
-	infratructure "erp-directory-service/internal/infrastructure"
 	"errors"
+	"go-bootstrap/internal/app"
+	"go-bootstrap/internal/config"
+	infratructure "go-bootstrap/internal/infrastructure"
 	"syscall"
 	"time"
 

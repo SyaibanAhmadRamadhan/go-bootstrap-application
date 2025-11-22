@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
-	"erp-directory-service/internal/config"
-	"erp-directory-service/internal/infrastructure"
-	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
-	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
-	workerhealthcheck "erp-directory-service/internal/worker/healthcheck"
 	"errors"
+	"go-bootstrap/internal/config"
+	"go-bootstrap/internal/infrastructure"
+	healthcheckrepository "go-bootstrap/internal/module/healthcheck/repository"
+	healthcheckservice "go-bootstrap/internal/module/healthcheck/service"
+	workerhealthcheck "go-bootstrap/internal/worker/healthcheck"
 	"log/slog"
 	"time"
 

@@ -1,12 +1,11 @@
 package transporthealthcheck
 
 import (
-	domainhealthcheck "erp-directory-service/internal/domain/healthcheck"
-	"erp-directory-service/internal/gen/restapigen"
+	domainhealthcheck "go-bootstrap/internal/domain/healthcheck"
+	"go-bootstrap/internal/gen/restapigen"
 	"net/http"
 
-	httpx "github.com/SyaibanAhmadRamadhan/go-foundation-kit/http"
-	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/chix"
+	"github.com/gin-gonic/gin"
 )
 
 type TransportHealthCheckRestApi struct {
@@ -21,8 +20,8 @@ func NewTransportRestApi(
 	}
 }
 
-func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(w http.ResponseWriter, r *http.Request) {
-	outputHealthcheck := t.healthcheckService.CheckDependencies(r.Context())
+func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(c *gin.Context) {
+	outputHealthcheck := t.healthcheckService.CheckDependencies(c.Request.Context())
 
 	resp := restapigen.ApiV1GetHealthCheckResponse{
 		Dependencies: restapigen.ApiV1GetHealthCheckResponseDependencies{
@@ -36,5 +35,5 @@ func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(w http.ResponseWriter,
 		Timestamp: outputHealthcheck.Timestamp,
 	}
 
-	chix.Write(w, http.StatusOK, httpx.ContentTypeJSON, resp)
+	c.JSON(http.StatusOK, resp)
 }

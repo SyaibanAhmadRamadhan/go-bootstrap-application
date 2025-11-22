@@ -2,25 +2,27 @@ package app
 
 import (
 	"context"
-	"erp-directory-service/internal/config"
-	"erp-directory-service/internal/gen/restapigen"
-	"erp-directory-service/internal/infrastructure"
-	healthcheckrepository "erp-directory-service/internal/module/healthcheck/repository"
-	healthcheckservice "erp-directory-service/internal/module/healthcheck/service"
-	transporthealthcheck "erp-directory-service/internal/transport/healthcheck"
 	"errors"
 	"fmt"
+	"go-bootstrap/internal/config"
+	"go-bootstrap/internal/gen/restapigen"
+	"go-bootstrap/internal/infrastructure"
+	healthcheckrepository "go-bootstrap/internal/module/healthcheck/repository"
+	healthcheckservice "go-bootstrap/internal/module/healthcheck/service"
+	transporthealthcheck "go-bootstrap/internal/transport/healthcheck"
+	"io"
 	"log/slog"
 	"net/http"
 
-	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/chix"
-	"github.com/go-chi/chi/v5"
+	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/ginx"
+	"github.com/gin-gonic/gin"
 )
 
 type restApiApp struct {
-	server  *http.Server
-	port    int
-	closeFn []func() error
+	server    *http.Server
+	ginEngine *gin.Engine
+	port      int
+	closeFn   []func() error
 }
 
 func NewRestApiApp(port int) *restApiApp {
@@ -29,27 +31,44 @@ func NewRestApiApp(port int) *restApiApp {
 		port = appCfg.Port
 	}
 
-	handler := chix.New(chix.Config{
+	if appCfg.Gin.DisableDefaultWriter {
+		gin.DefaultWriter = io.Discard
+	}
+	if appCfg.Gin.DisableErrorWriter {
+		gin.DefaultErrorWriter = io.Discard
+	}
+
+	ginEngine := ginx.NewGin(ginx.GinConfig{
 		BlacklistRouteLogResponse: map[string]struct{}{},
 		SensitiveFields:           map[string]struct{}{},
-		CorsConf: chix.CorsConfig{
-			AllowOrigins:     nil,
-			AllowMethods:     nil,
-			AllowHeaders:     nil,
-			AllowCredentials: true,
+		CorsConf: ginx.CorsConfig{
+			AllowOrigins:     appCfg.Gin.Cors.AllowOrigins,
+			AllowMethods:     appCfg.Gin.Cors.AllowMethods,
+			AllowHeaders:     appCfg.Gin.Cors.AllowHeaders,
+			AllowCredentials: appCfg.Gin.Cors.AllowCredentials,
+			ExposeHeaders:    appCfg.Gin.Cors.ExposeHeaders,
+			MaxAge:           appCfg.Gin.Cors.MaxAge,
 		},
 		AppName: appCfg.Name,
-		UseOtel: false,
+		UseOtel: appCfg.Gin.UseOtel,
 	})
 
-	restapiApp := &restApiApp{
-		port:    port,
-		closeFn: make([]func() error, 0),
+	gin.SetMode(appCfg.Gin.Mode)
+	if appCfg.Gin.DisableConsoleColor {
+		gin.DisableConsoleColor()
 	}
+
+	restapiApp := &restApiApp{
+		port:      port,
+		ginEngine: ginEngine,
+		closeFn:   make([]func() error, 0),
+	}
+
+	restapigen.RegisterHandlers(ginEngine, restapiApp.init())
 
 	restapiApp.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: restapigen.HandlerFromMux(restapiApp.init(handler), handler),
+		Handler: ginEngine,
 	}
 
 	return restapiApp
@@ -84,18 +103,19 @@ func (r *restApiApp) Start() {
 	}
 }
 
-func (r *restApiApp) init(c *chi.Mux) routerRestApi {
+func (r *restApiApp) init() routerRestApi {
 	db, err := infrastructure.NewDB()
 	if err != nil {
 		panic(err)
 	}
 	r.closeFn = append(r.closeFn, db.Close)
 
+	_ = ginx.NewGinHelper("message", "errors")
+
 	healthcheckRepo := healthcheckrepository.NewRepository(db)
 	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
 
 	router := routerRestApi{
-		handler:                     c,
 		TransportHealthCheckRestApi: transporthealthcheck.NewTransportRestApi(healthcheckService),
 	}
 
@@ -103,7 +123,6 @@ func (r *restApiApp) init(c *chi.Mux) routerRestApi {
 }
 
 type routerRestApi struct {
-	handler *chi.Mux
 	// restapigen.Unimplemented
 	*transporthealthcheck.TransportHealthCheckRestApi
 }

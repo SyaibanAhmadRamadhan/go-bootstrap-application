@@ -2,8 +2,8 @@ package transporthealthcheck
 
 import (
 	"context"
-	domainhealthcheck "erp-directory-service/internal/domain/healthcheck"
-	"erp-directory-service/internal/gen/grpcgen/healthcheck"
+	domainhealthcheck "go-bootstrap/internal/domain/healthcheck"
+	"go-bootstrap/internal/gen/grpcgen/healthcheck"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

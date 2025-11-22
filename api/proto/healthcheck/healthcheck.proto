@@ -4,7 +4,7 @@ package healthcheck;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "erp-directory-service/gen/grpc/healthcheck";
+option go_package = "go-bootstrap/gen/grpc/healthcheck";
 
 // ServiceStatus represents the overall health status of the service
 enum ServiceStatus {

@@ -13,7 +13,7 @@ api_generate: api/openapi/api.yaml
 	npx openapi-format api/openapi/api.yaml -s api/openapi/openapi-sort.json -f api/openapi/openapi-filter.json -o api/openapi/api.yaml
 	mkdir -p internal/gen/restapigen
 	go tool oapi-codegen --package restapigen -generate types $< > internal/gen/restapigen/api-types.gen.go
-	go tool oapi-codegen --package restapigen -generate chi,spec $< > internal/gen/restapigen/api-server.gen.go
+	go tool oapi-codegen --package restapigen -generate gin,spec $< > internal/gen/restapigen/api-server.gen.go
 
 buf_generate:
 	buf generate

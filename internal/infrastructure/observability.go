@@ -2,8 +2,8 @@ package infrastructure
 
 import (
 	"context"
-	"erp-directory-service/internal/config"
 	"fmt"
+	"go-bootstrap/internal/config"
 	"io"
 	"os"
 

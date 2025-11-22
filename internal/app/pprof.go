@@ -2,9 +2,9 @@ package app
 
 import (
 	"context"
-	"erp-directory-service/internal/config"
 	"errors"
 	"fmt"
+	"go-bootstrap/internal/config"
 	"log/slog"
 	"net/http"
 	"net/http/pprof"

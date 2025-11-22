@@ -2,7 +2,7 @@ package healthcheckservice
 
 import (
 	"context"
-	domainhealthcheck "erp-directory-service/internal/domain/healthcheck"
+	domainhealthcheck "go-bootstrap/internal/domain/healthcheck"
 	"time"
 )
 

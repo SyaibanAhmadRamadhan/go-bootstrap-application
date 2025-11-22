@@ -103,8 +103,8 @@ package app
 
 import (
     "context"
-    "erp-directory-service/internal/config"
-    workerhealthcheck "erp-directory-service/internal/worker/healthcheck"
+    "go-bootstrap/internal/config"
+    workerhealthcheck "go-bootstrap/internal/worker/healthcheck"
     "log/slog"
     "time"
 

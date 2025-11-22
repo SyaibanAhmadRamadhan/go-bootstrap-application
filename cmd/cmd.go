@@ -1,9 +1,10 @@
 package main
 
 import (
-	"erp-directory-service/internal/config"
+	"go-bootstrap/internal/config"
 	"log"
 
+	"github.com/SyaibanAhmadRamadhan/go-foundation-kit/validatorx"
 	"github.com/spf13/cobra"
 )
 
@@ -13,10 +14,11 @@ func init() {
 
 func main() {
 	root := &cobra.Command{
-		Use:   "directoryservice",
-		Short: "A CLI Directory Service",
+		Use:   "go-boostrap",
+		Short: "A CLI Golang Boostrap",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			config.LoadConfig(cmd.Name())
+			validatorx.InitValidator()
 		},
 	}
 

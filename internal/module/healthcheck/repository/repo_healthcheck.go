@@ -1,6 +1,6 @@
 package healthcheckrepository
 
-import "erp-directory-service/internal/infrastructure"
+import "go-bootstrap/internal/infrastructure"
 
 type repository struct {
 	db infrastructure.DB
