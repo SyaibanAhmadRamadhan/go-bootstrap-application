@@ -132,7 +132,7 @@ func (r *restApiApp) init() routerRestApi {
 	)
 
 	router := routerRestApi{
-		HealthCheckRestApiHandler: transporthealthcheck.NewTransportRestApi(healthcheckService),
+		HealthCheckRestApiHandler: transporthealthcheck.NewRestApiHandler(healthcheckService),
 		AuthRestAPIHandler:        transportauth.NewRestAPIHandler(authService, ginHelper),
 		UserRestAPIHandler:        transportuser.NewRestAPIHandler(userService, ginHelper),
 	}

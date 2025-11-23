@@ -8,20 +8,20 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type TransportHealthCheckGrpc struct {
+type HealthCheckGrpcHandler struct {
 	healthcheckService domainhealthcheck.HealthCheckService
 	healthcheck.UnimplementedHealthCheckServiceServer
 }
 
-func NewTransportGrpc(
+func NewGrpcHandler(
 	healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckGrpc {
-	return &TransportHealthCheckGrpc{
+) *HealthCheckGrpcHandler {
+	return &HealthCheckGrpcHandler{
 		healthcheckService: healthcheckService,
 	}
 }
 
-func (t *TransportHealthCheckGrpc) ApiV1HealthCheck(ctx context.Context, _ *healthcheck.ApiV1HealthCheckRequest) (*healthcheck.ApiV1HealthCheckResponse, error) {
+func (t *HealthCheckGrpcHandler) ApiV1HealthCheck(ctx context.Context, _ *healthcheck.ApiV1HealthCheckRequest) (*healthcheck.ApiV1HealthCheckResponse, error) {
 	outputHealthcheck := t.healthcheckService.CheckDependencies(ctx)
 
 	statusHealthCheck := healthcheck.ServiceStatus_HEALTH_CHECK_SERVICE_STATUS_HEALTHY

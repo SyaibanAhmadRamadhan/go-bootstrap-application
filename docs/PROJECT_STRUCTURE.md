@@ -4,13 +4,42 @@ This document provides a detailed overview of the project structure and architec
 
 ## Table of Contents
 
-- [Layer Overview](#layer-overview)
-- [Domain Layer](#domain-layer)
-- [Module Layer](#module-layer)
-- [Transport Layer](#transport-layer)
-- [Worker Layer](#worker-layer)
-- [Other Important Directories](#other-important-directories)
-- [Architecture Flow](#architecture-flow)
+- [Project Structure](#project-structure)
+  - [Table of Contents](#table-of-contents)
+  - [Layer Overview](#layer-overview)
+  - [Domain Layer](#domain-layer)
+    - [Domain Structure](#domain-structure)
+    - [Domain Key Principles](#domain-key-principles)
+    - [Domain Example](#domain-example)
+  - [Module Layer](#module-layer)
+    - [Module Structure](#module-structure)
+    - [Module Key Principles](#module-key-principles)
+    - [Module Example](#module-example)
+  - [Transport Layer](#transport-layer)
+    - [Transport Structure](#transport-structure)
+    - [Transport Key Principles](#transport-key-principles)
+    - [Transport Responsibilities](#transport-responsibilities)
+    - [Transport Does NOT Handle](#transport-does-not-handle)
+    - [Transport Examples](#transport-examples)
+  - [Worker Layer](#worker-layer)
+    - [Worker Structure](#worker-structure)
+    - [What Goes in Worker Layer](#what-goes-in-worker-layer)
+    - [Worker Key Principles](#worker-key-principles)
+    - [Worker Responsibilities](#worker-responsibilities)
+    - [Worker Does NOT Handle](#worker-does-not-handle)
+    - [Worker vs Transport](#worker-vs-transport)
+    - [Worker Examples](#worker-examples)
+  - [Other Important Directories](#other-important-directories)
+    - [API Specifications (api/)](#api-specifications-api)
+    - [Application Entry Points (cmd/)](#application-entry-points-cmd)
+    - [Application Layer (internalapp/)](#application-layer-internalapp)
+    - [Configuration (internalconfig/)](#configuration-internalconfig)
+    - [Generated Code (internalgen/)](#generated-code-internalgen)
+    - [Infrastructure (internalinfrastructure/)](#infrastructure-internalinfrastructure)
+    - [Worker Handlers (internalworker/)](#worker-handlers-internalworker)
+  - [Architecture Flow](#architecture-flow)
+    - [Request Flow Example](#request-flow-example)
+    - [Worker Flow Example](#worker-flow-example)
 
 ## Layer Overview
 
@@ -38,7 +67,7 @@ The project follows a clean architecture pattern with clear separation of concer
 
 The domain layer contains business logic interfaces and data structures. Each domain represents a business capability.
 
-### Structure
+### Domain Structure
 
 ```text
 internal/domain/<feature>/
@@ -48,14 +77,14 @@ internal/domain/<feature>/
 └── value_object.go     # Domain value objects and enums
 ```
 
-### Key Principles
+### Domain Key Principles
 
 - Defines **interfaces only**, no implementation
 - Contains DTOs, value objects, and business rules
 - Framework-agnostic and pure Go code
 - Generates mock interfaces for testing using `go:generate` directives
 
-### Example
+### Domain Example
 
 ```go
 type HealthCheckService interface {
@@ -69,7 +98,7 @@ type HealthCheckService interface {
 
 The module layer contains concrete implementations of domain interfaces. This is where the actual business logic lives.
 
-### Structure
+### Module Structure
 
 ```text
 internal/module/<feature>/
@@ -82,7 +111,7 @@ internal/module/<feature>/
     └── service_<feature>_test.go
 ```
 
-### Key Principles
+### Module Key Principles
 
 - Implements domain interfaces
 - Contains actual business logic
@@ -90,7 +119,7 @@ internal/module/<feature>/
 - Separated into `repository` (data access) and `service` (business logic)
 - Each implementation can have multiple variants (e.g., datastore, cache, external API)
 
-### Example
+### Module Example
 
 ```go
 type service struct {
@@ -108,15 +137,27 @@ func (s *service) CheckDependencies(ctx context.Context) (output domainhealthche
 
 The transport layer acts as the adapter between external protocols (HTTP REST, gRPC) and your domain/business logic.
 
-### Structure
+### Transport Structure
 
 ```text
 internal/transport/<feature>/
 ├── grpc_<feature>.go      # gRPC handlers
 └── restapi_<feature>.go   # REST API handlers
+
+# Example:
+internal/transport/
+├── healthcheck/
+│   ├── grpc_healthcheck.go
+│   └── restapi_healthcheck.go
+├── auth/
+│   ├── grpc_auth.go
+│   └── restapi_auth.go
+└── user/
+    ├── grpc_user.go
+    └── restapi_user.go
 ```
 
-### Key Principles
+### Transport Key Principles
 
 - Handles protocol-specific request/response formatting
 - Transforms between protocol types (protobuf, HTTP) and domain DTOs
@@ -124,7 +165,7 @@ internal/transport/<feature>/
 - Each transport handler depends on domain service interfaces
 - Thin layer that delegates to the domain/module layer
 
-### Responsibilities
+### Transport Responsibilities
 
 - **Request Parsing** - Extract and validate request parameters
 - **Data Transformation** - Convert between protocol types and domain DTOs
@@ -132,14 +173,14 @@ internal/transport/<feature>/
 - **Error Handling** - Map domain errors to appropriate HTTP/gRPC status codes
 - **Protocol Concerns** - Handle HTTP headers, gRPC metadata, status codes
 
-### Does NOT Handle
+### Transport Does NOT Handle
 
 - Business logic
 - Direct database or external service access
 - Data validation (domain layer responsibility)
 - Business rule decisions
 
-### Examples
+### Transport Examples
 
 See [TRANSPORT_EXAMPLES.md](TRANSPORT_EXAMPLES.md) for detailed gRPC and REST API transport examples.
 
@@ -149,7 +190,7 @@ See [TRANSPORT_EXAMPLES.md](TRANSPORT_EXAMPLES.md) for detailed gRPC and REST AP
 
 The worker layer is responsible for **all background processing tasks**.
 
-### Structure
+### Worker Structure
 
 ```text
 internal/worker/<feature>/
@@ -178,7 +219,7 @@ internal/worker/<feature>/
    - Data synchronization
    - Batch operations
 
-### Key Principles
+### Worker Key Principles
 
 - Handles all background processing (scheduled, event-driven, async)
 - No business logic - only triggering and calling services
@@ -186,7 +227,7 @@ internal/worker/<feature>/
 - Thin layer that delegates to the domain/module layer
 - Independent from HTTP/gRPC layers
 
-### Responsibilities
+### Worker Responsibilities
 
 - **Schedule Management** - Register and manage cron schedules
 - **Event Processing** - Consume and process messages from brokers
@@ -195,7 +236,7 @@ internal/worker/<feature>/
 - **Logging** - Log job execution for monitoring
 - **Service Delegation** - Call domain services to perform actual work
 
-### Does NOT Handle
+### Worker Does NOT Handle
 
 - Business logic
 - Direct database or external service access
@@ -212,20 +253,20 @@ internal/worker/<feature>/
 | **Use Cases** | Scheduled jobs, event processing | API requests, real-time operations |
 | **Examples** | Daily cleanup, Kafka consumer | GET /users, gRPC GetUser |
 
-### Examples
+### Worker Examples
 
 See [WORKER_EXAMPLES.md](WORKER_EXAMPLES.md) for detailed scheduler and cron job examples.
 
 ## Other Important Directories
 
-### API Specifications (`api/`)
+### API Specifications (api/)
 
 Contains API contract definitions:
 
 - `api/openapi/` - OpenAPI/Swagger specifications
 - `api/proto/` - Protocol Buffer definitions
 
-### Application Entry Points (`cmd/`)
+### Application Entry Points (cmd/)
 
 CLI commands and application initialization:
 
@@ -233,7 +274,7 @@ CLI commands and application initialization:
 - `cmd_grpc_api.go` - gRPC API server command
 - `cmd_scheduler.go` - Scheduler command
 
-### Application Layer (`internal/app/`)
+### Application Layer (internalapp/)
 
 Application wiring and initialization:
 
@@ -242,14 +283,14 @@ Application wiring and initialization:
 - `scheduler.go` - Scheduler app setup
 - `pprof.go` - Pprof server management
 
-### Configuration (`internal/config/`)
+### Configuration (internalconfig/)
 
 Configuration management:
 
 - `type.go` - Configuration struct definitions
 - `load_config.go` - Config loading and getters
 
-### Generated Code (`internal/gen/`)
+### Generated Code (internalgen/)
 
 Auto-generated code (excluded from git):
 
@@ -259,7 +300,7 @@ Auto-generated code (excluded from git):
 
 **Important:** Run `make generate` after cloning to generate these files.
 
-### Infrastructure (`internal/infrastructure/`)
+### Infrastructure (internalinfrastructure/)
 
 Infrastructure setup and cross-cutting concerns:
 
@@ -268,7 +309,7 @@ Infrastructure setup and cross-cutting concerns:
 
 The infrastructure layer automatically reads configuration from `config` package using context-aware getters (`GetDatabase()`, `GetDebugMode()`, `GetAppName()`, etc.).
 
-### Worker Handlers (`internal/worker/`)
+### Worker Handlers (internalworker/)
 
 Background job implementations:
 

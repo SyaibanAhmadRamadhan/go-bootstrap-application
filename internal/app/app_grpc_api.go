@@ -90,7 +90,7 @@ func (r *grpcApiApp) init() {
 	healthcheckService := healthcheckservice.NewService(healthcheckRepo)
 
 	routerGrpc := routerGrpcApi{
-		healthcheck: transporthealthcheck.NewTransportGrpc(healthcheckService),
+		healthcheck: transporthealthcheck.NewGrpcHandler(healthcheckService),
 	}
 
 	routerGrpc.init(r.server)
@@ -98,7 +98,7 @@ func (r *grpcApiApp) init() {
 }
 
 type routerGrpcApi struct {
-	healthcheck *transporthealthcheck.TransportHealthCheckGrpc
+	healthcheck *transporthealthcheck.HealthCheckGrpcHandler
 }
 
 func (i *routerGrpcApi) init(s *grpc.Server) {

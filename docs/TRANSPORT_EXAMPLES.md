@@ -23,20 +23,20 @@ import (
     "google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type TransportHealthCheckGrpc struct {
+type HealthCheckGrpcHandler struct {
     healthcheckService domainhealthcheck.HealthCheckService
     healthcheck.UnimplementedHealthCheckServiceServer
 }
 
-func NewTransportGrpc(
+func NewGrpcHandler(
     healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckGrpc {
-    return &TransportHealthCheckGrpc{
+) *HealthCheckGrpcHandler {
+    return &HealthCheckGrpcHandler{
         healthcheckService: healthcheckService,
     }
 }
 
-func (t *TransportHealthCheckGrpc) ApiV1HealthCheck(
+func (h *HealthCheckGrpcHandler) ApiV1HealthCheck(
     ctx context.Context, 
     req *healthcheck.ApiV1HealthCheckRequest,
 ) (*healthcheck.ApiV1HealthCheckResponse, error) {
@@ -99,20 +99,20 @@ import (
     "google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type TransportUserGrpc struct {
+type UserGrpcHandler struct {
     userService domainuser.UserService
     user.UnimplementedUserServiceServer
 }
 
-func NewTransportGrpc(
+func NewGrpcHandler(
     userService domainuser.UserService,
-) *TransportUserGrpc {
-    return &TransportUserGrpc{
+) *UserGrpcHandler {
+    return &UserGrpcHandler{
         userService: userService,
     }
 }
 
-func (t *TransportUserGrpc) ApiV1CreateUser(
+func (h *UserGrpcHandler) ApiV1CreateUser(
     ctx context.Context,
     req *user.ApiV1CreateUserRequest,
 ) (*user.ApiV1CreateUserResponse, error) {
@@ -138,12 +138,12 @@ func (t *TransportUserGrpc) ApiV1CreateUser(
     }, nil
 }
 
-func (t *TransportUserGrpc) ApiV1GetUser(
+func (h *UserGrpcHandler) ApiV1GetUser(
     ctx context.Context,
     req *user.ApiV1GetUserRequest,
 ) (*user.ApiV1GetUserResponse, error) {
     // Call domain service
-    output, err := t.userService.GetUserByID(ctx, req.UserId)
+    output, err := h.userService.GetUserByID(ctx, req.UserId)
     if err != nil {
         return nil, mapErrorToGrpcStatus(err)
     }
@@ -196,31 +196,33 @@ func mapUserStatusToProto(s domainuser.UserStatus) user.UserStatus {
 package transporthealthcheck
 
 import (
-    "net/http"
     domainhealthcheck "project/internal/domain/healthcheck"
     "project/internal/gen/restapigen"
     
-    "github.com/go-chi/render"
+    "github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/ginx"
+    "github.com/gin-gonic/gin"
 )
 
-type TransportHealthCheckRestApi struct {
+type HealthCheckRestAPIHandler struct {
     healthcheckService domainhealthcheck.HealthCheckService
+    helper *ginx.GinHelper
 }
 
-func NewTransportRestApi(
+func NewRestAPIHandler(
     healthcheckService domainhealthcheck.HealthCheckService,
-) *TransportHealthCheckRestApi {
-    return &TransportHealthCheckRestApi{
+    helper *ginx.GinHelper,
+) *HealthCheckRestAPIHandler {
+    return &HealthCheckRestAPIHandler{
         healthcheckService: healthcheckService,
+        helper: helper,
     }
 }
 
-func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
-    w http.ResponseWriter, 
-    r *http.Request,
+func (h *HealthCheckRestAPIHandler) ApiV1GetHealthCheck(
+    c *gin.Context,
 ) {
     // Call domain service
-    output := t.healthcheckService.CheckDependencies(r.Context())
+    output := h.healthcheckService.CheckDependencies(c.Request.Context())
 
     // Transform domain output to REST API response
     resp := restapigen.ApiV1GetHealthCheckResponse{
@@ -247,31 +249,31 @@ func (t *TransportHealthCheckRestApi) ApiV1GetHealthCheck(
 package transportuser
 
 import (
-    "encoding/json"
     "errors"
-    "net/http"
     domainuser "project/internal/domain/user"
     "project/internal/gen/restapigen"
     
-    "github.com/go-chi/chi/v5"
-    "github.com/go-chi/render"
+    "github.com/SyaibanAhmadRamadhan/go-foundation-kit/http/server/ginx"
+    "github.com/gin-gonic/gin"
 )
 
-type TransportUserRestApi struct {
+type UserRestAPIHandler struct {
     userService domainuser.UserService
+    helper *ginx.GinHelper
 }
 
-func NewTransportRestApi(
+func NewRestAPIHandler(
     userService domainuser.UserService,
-) *TransportUserRestApi {
-    return &TransportUserRestApi{
+    helper *ginx.GinHelper,
+) *UserRestAPIHandler {
+    return &UserRestAPIHandler{
         userService: userService,
+        helper: helper,
     }
 }
 
-func (t *TransportUserRestApi) ApiV1PostUsers(
-    w http.ResponseWriter, 
-    r *http.Request,
+func (h *UserRestAPIHandler) ApiV1PostUsers(
+    c *gin.Context,
 ) {
     // Parse request body
     var req restapigen.ApiV1PostUsersRequest

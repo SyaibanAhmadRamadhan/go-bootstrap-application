@@ -5,22 +5,63 @@ This repository provides a ready-to-use project layout, wiring, and tooling so y
 
 Designed for a "distributed monolith" architecture: many services, one database, with clear ownership and strict API contracts between services.
 
+## Table of Contents
+
+- [GO SERVICE BOOTSTRAP](#go-service-bootstrap)
+  - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Database Setup](#database-setup)
+    - [Using Docker Compose](#using-docker-compose)
+    - [Manual PostgreSQL Setup](#manual-postgresql-setup)
+  - [Documentation](#documentation)
+  - [Makefile Commands](#makefile-commands)
+    - [Running the Application](#running-the-application)
+    - [Code Generation](#code-generation)
+    - [Utilities](#utilities)
+  - [Project Structure](#project-structure)
+  - [Architecture Overview](#architecture-overview)
+    - [Layer Responsibilities](#layer-responsibilities)
+  - [Development Workflow](#development-workflow)
+  - [Error Handling](#error-handling)
+    - [Error Types](#error-types)
+    - [Usage Example in Service Layer](#usage-example-in-service-layer)
+    - [Transport Layer with GinHelper](#transport-layer-with-ginhelper)
+    - [GinHelper Features](#ginhelper-features)
+    - [Benefits](#benefits)
+    - [Error Response Format](#error-response-format)
+  - [Configuration](#configuration)
+    - [Example Configuration](#example-configuration)
+  - [Performance \& Debugging](#performance--debugging)
+    - [Pprof Profiling](#pprof-profiling)
+    - [Memory Leak Detection](#memory-leak-detection)
+  - [Testing](#testing)
+  - [Key Features](#key-features)
+  - [Examples](#examples)
+    - [Quick Examples](#quick-examples)
+
 ## Quick Start
 
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
 
-# 2. Install dependencies
+# 2. Start PostgreSQL with Docker Compose
+docker-compose up -d
+
+# 3. Install dependencies
 bash scripts/install_dependency.sh
 
-# 3. Create configuration
+# 4. Create configuration
 cp env.example.json env.json
 
-# 4. Generate code
+# 5. Update database DSN in env.json
+# "dsn": "postgres://postgres:postgres@localhost:5432/go_bootstrap?sslmode=disable"
+
+# 6. Generate code
 make generate
 
-# 5. Run the application
+# 7. Run the application
 make run-restapi    # REST API server
 make run-grpcapi    # gRPC API server
 make run-scheduler  # Background scheduler
@@ -29,11 +70,73 @@ make run-scheduler  # Background scheduler
 ## Prerequisites
 
 - Go 1.24 or higher
+- Docker & Docker Compose (for PostgreSQL)
 - Node.js and npm (for OpenAPI tooling)
 - Make
 
+## Database Setup
+
+### Using Docker Compose
+
+The easiest way to set up PostgreSQL for development:
+
+```bash
+# Start PostgreSQL container
+docker-compose up -d
+
+# Check container status
+docker-compose ps
+
+# View logs
+docker-compose logs -f postgres
+
+# Stop PostgreSQL
+docker-compose down
+
+# Stop and remove data
+docker-compose down -v
+```
+
+**Database Configuration:**
+
+- **Host:** localhost
+- **Port:** 5432
+- **Database:** go_bootstrap
+- **User:** postgres
+- **Password:** postgres
+- **DSN:** `postgres://postgres:postgres@localhost:5432/go_bootstrap?sslmode=disable`
+
+**Migrations:** Automatically run on container startup via `docker-entrypoint-initdb.d`.
+
+### Manual PostgreSQL Setup
+
+If you prefer manual setup:
+
+```bash
+# 1. Install PostgreSQL
+brew install postgresql@16  # macOS
+# or use your OS package manager
+
+# 2. Start PostgreSQL
+brew services start postgresql@16
+
+# 3. Create database and user
+psql postgres
+CREATE DATABASE go_bootstrap;
+CREATE USER go_user WITH ENCRYPTED PASSWORD 'go_password';
+GRANT ALL PRIVILEGES ON DATABASE go_bootstrap TO go_user;
+\q
+
+# 4. Run migrations manually
+psql -U go_user -d go_bootstrap -f migrations/001_create_auth_and_user_tables.sql
+
+# 5. Update DSN in env.json
+# "dsn": "postgres://go_user:go_password@localhost:5432/go_bootstrap?sslmode=disable"
+```
+
 ## Documentation
 
+- **[Docker Setup Guide](docs/DOCKER_SETUP.md)** - PostgreSQL setup with Docker Compose
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Configuration structure, pprof hot-reload, and settings
 - **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Architecture layers and directory organization
 - **[Naming Conventions](docs/NAMING_CONVENTIONS.md)** - Package, file, and code naming standards
@@ -148,6 +251,157 @@ This project follows clean architecture principles with clear separation of conc
 5. **Create Handlers** - Add transport handlers (`internal/transport/`) or workers (`internal/worker/`)
 6. **Wire Dependencies** - Configure in `internal/app/`
 7. **Run & Test** - Use `make run-restapi` or `make run-grpcapi`
+
+## Error Handling
+
+This project uses standardized error handling with **AppError** from `go-foundation-kit/apperror`:
+
+### Error Types
+
+```go
+// BadRequest - 400 (client error, validation failed, etc.)
+apperror.BadRequest("email already registered")
+
+// Unauthorized - 401 (authentication required)
+apperror.Unauthorized("invalid credentials")
+
+// Forbidden - 403 (authenticated but not authorized)
+apperror.Forbidden("insufficient permissions")
+
+// NotFound - 404 (resource not found)
+apperror.NotFound("user not found")
+
+// Conflict - 409 (resource conflict)
+apperror.Conflict("email already exists")
+
+// StdUnknown - 500 (wrap unexpected errors)
+apperror.StdUnknown(err)
+```
+
+### Usage Example in Service Layer
+
+```go
+func (s *service) Register(ctx context.Context, input RegisterInput) (RegisterOutput, error) {
+    // Check if user exists
+    existingUser, _ := s.userRepo.GetDetailUser(ctx, filters)
+    if existingUser.ID != "" {
+        return RegisterOutput{}, apperror.BadRequest("email already registered")
+    }
+    
+    // Handle unexpected errors
+    passwordHash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+    if err != nil {
+        return RegisterOutput{}, apperror.StdUnknown(err)
+    }
+    
+    // Continue...
+}
+```
+
+### Transport Layer with GinHelper
+
+The transport layer uses **`ginx.GinHelper`** to handle requests and responses automatically:
+
+```go
+type UserRestAPIHandler struct {
+    userService domainuser.UserService
+    helper      *ginx.GinHelper  // Helper for request/response handling
+}
+
+func NewRestAPIHandler(userService domainuser.UserService, helper *ginx.GinHelper) *UserRestAPIHandler {
+    return &UserRestAPIHandler{
+        userService: userService,
+        helper:      helper,
+    }
+}
+
+func (h *UserRestAPIHandler) ApiV1PostUsersRegister(c *gin.Context) {
+    var req restapigen.ApiV1PostUsersRegisterRequest
+    
+    // Automatically bind request body and validate
+    if err := h.helper.BindBody(c, &req); err != nil {
+        return  // Error response handled automatically
+    }
+    
+    // Call service
+    output, err := h.userService.Register(c.Request.Context(), domainuser.RegisterInput{
+        Email:    req.Email,
+        Password: req.Password,
+        Name:     req.Name,
+    })
+    
+    // Automatically handle error response with proper status code
+    if err != nil {
+        h.helper.ResponseError(c, err)
+        return
+    }
+    
+    // Automatically send success response
+    h.helper.ResponseSuccess(c, http.StatusCreated, restapigen.ApiV1PostUsersRegisterResponse{
+        UserId:    output.UserID,
+        Email:     output.Email,
+        Name:      output.Name,
+        CreatedAt: output.CreatedAt,
+    })
+}
+```
+
+### GinHelper Features
+
+**Initialization:**
+
+```go
+// In app initialization (internal/app/app_rest_api.go)
+ginHelper := ginx.NewGinHelper("message", "errors")  // JSON keys for error responses
+```
+
+**Key Methods:**
+
+1. **`MustShouldBind(c, &req)`** - Bind and validate request body
+   - Returns validation errors automatically
+   - Supports struct tags validation
+
+2. **`ResponseError(c, err)`** - Handle error response
+   - Maps `apperror` to proper HTTP status codes
+   - Returns structured JSON error format
+   - Example: `{"message": "email already registered"}`
+
+### Benefits
+
+- **Automatic Error Mapping** - AppError → HTTP status codes (BadRequest=400, NotFound=404, etc.)
+- **Structured Responses** - Consistent JSON format for success and errors
+- **Validation Handling** - Built-in request validation with detailed error messages
+- **Less Boilerplate** - No manual error handling in transport layer
+- **Type Safety** - Works seamlessly with generated OpenAPI types
+
+### Error Response Format
+
+```json
+// Success Response
+{
+    "user_id": "12345",
+    "email": "user@example.com",
+    "name": "John Doe"
+}
+
+// Error Response (validation)
+{
+    "message": "Validation failed",
+    "errors": [
+        {
+            "field": "email",
+            "message": ["Email is required", "Email is invalid"]
+        }
+    ]
+}
+
+// Error Response (business logic)
+{
+    "message": "email already registered"
+}
+```
+
+See implementations in `internal/transport/auth/restapi_auth.go` and `internal/transport/user/restapi_user.go`.
 
 ## Configuration
 
@@ -273,6 +527,8 @@ make go_generate
 - **✅ Hot-Reload Config** - Configuration changes detected automatically in development
 - **✅ Code Generation** - OpenAPI → REST handlers, Protobuf → gRPC stubs, Mockgen → Test mocks
 - **✅ Multiple Protocols** - REST API, gRPC API, and background workers in one project
+- **✅ Query Builder** - Squirrel SQL query builder for type-safe database queries
+- **✅ Error Handling** - Standardized AppError from go-foundation-kit for consistent error responses
 - **✅ Structured Logging** - slog-based structured logging throughout
 - **✅ Built-in Profiling** - pprof endpoints with hot-reload for performance analysis
 - **✅ Graceful Shutdown** - Proper cleanup and shutdown handling
@@ -325,11 +581,3 @@ See detailed examples in:
 
 - [Transport Examples](docs/TRANSPORT_EXAMPLES.md) - gRPC & REST API handlers
 - [Worker Examples](docs/WORKER_EXAMPLES.md) - Cron jobs & schedulers
-
-## Contributing
-
-1. Follow the [Naming Conventions](docs/NAMING_CONVENTIONS.md)
-2. Keep layers properly separated (no business logic in transport/worker)
-3. Write tests with generated mocks
-4. Run `make generate` before committing
-5. Use structured logging (slog)

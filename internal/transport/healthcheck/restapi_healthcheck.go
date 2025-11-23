@@ -12,7 +12,7 @@ type HealthCheckRestApiHandler struct {
 	healthcheckService domainhealthcheck.HealthCheckService
 }
 
-func NewTransportRestApi(
+func NewRestApiHandler(
 	healthcheckService domainhealthcheck.HealthCheckService,
 ) *HealthCheckRestApiHandler {
 	return &HealthCheckRestApiHandler{
